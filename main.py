@@ -85,9 +85,13 @@ def show_matches(image_a, image_b, key_points_a, key_points_b, matches, status):
 
 
 def main(args):
-    print("Hello world")
-    print("dzea")
     images = load_images(args.folder)
+    kp_a, desc_a = get_sift(images[0][0])
+    kp_b, desc_b = get_sift(images[1][0])
+
+    matches, H, status = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
+
+    show_matches(images[0][0], images[1][0], kp_a, kp_b, matches, status)
 
 
 if __name__ == "__main__":
