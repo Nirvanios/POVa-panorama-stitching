@@ -13,6 +13,7 @@ parser.add_argument('--dest', help='destination of output image')
 
 def main():
     print("Hello world")
+    print("dzea")
 
 if __name__ == "__main__":
     args = parser.parse_args()
