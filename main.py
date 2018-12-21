@@ -22,7 +22,7 @@ def load_images(folder):
     :return: list of images and their names
     """
     filenames = glob.glob(folder + "/*.png")
-    images = [cv2.imread(img) for img in filenames]
+    images = [cv2.cvtColor(cv2.imread(img), cv2.COLOR_BGR2GRAY) for img in filenames]
     ret = []
     for i in range(len(filenames)):
         ret.append([images[i], os.path.basename(filenames[i])])
@@ -34,7 +34,7 @@ def get_sift(image):
     Get key points detected by SIFT
     :param image: input image
     """
-    gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_scale_image = image
     key_points, descriptors = sift.detectAndCompute(gray_scale_image, None)
 
     key_points = np.float32([key_point.pt for key_point in key_points])
@@ -60,7 +60,7 @@ def match_keypoints(key_points_a, key_points_b, descriptors_a, descriptors_b,
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
             matches.append((m[0].trainIdx, m[0].queryIdx))
 
-    if len(matches) > 4:
+    if len(matches) > 50:
         points_a = np.float32([key_points_a[i] for (_, i) in matches])
         points_b = np.float32([key_points_b[i] for (i, _) in matches])
 
@@ -102,17 +102,40 @@ def stitch_images(image_a, image_b, hom):
     return result
 
 
+def crop_black(image):
+    """
+    Crop black parts of the image
+    :param image: input image
+    :return: cropped image
+    """
+    _, thresh = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
+    _, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnt = contours[0]
+    x, y, w, h = cv2.boundingRect(cnt)
+
+    crop = image[y:y + h, x:x + w]
+    return crop
+
+
 def main(args):
     images = load_images(args.folder)
-    image_a = images[0][0]
-    image_b = images[1][0]
-    kp_a, desc_a = get_sift(image_a)
-    kp_b, desc_b = get_sift(image_b)
 
-    matches, H, status = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
+    panorama = images[0][0]
+    print("Base image:" + images[0][1])
+    for i in range(len(images)):
+        print("Current image:" + images[i][1])
+        kp_a, desc_a = get_sift(panorama)
+        kp_b, desc_b = get_sift(images[i][0])
+        m = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
+        if m is None:
+            continue
+        matches, H, status = m
+        # show_matches(panorama, images[i][0], kp_a, kp_b, matches, status)
+        panorama = stitch_images(panorama, images[i][0], H)
+        panorama = crop_black(panorama)
+        print(str(i) + "/" + str(len(images) - 1))
 
-    # show_matches(images[3][0], images[1][0], kp_a, kp_b, matches, status)
-    cv2.imshow('stitch result', stitch_images(image_a, image_b, H))
+    cv2.imshow('stitch result', panorama)
     cv2.waitKey()
 
 
