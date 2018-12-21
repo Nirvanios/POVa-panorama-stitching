@@ -88,15 +88,24 @@ def show_matches(image_a, image_b, key_points_a, key_points_b, matches, status):
     cv2.imshow('matches', result)
     cv2.waitKey()
 
+def stitch_images(image_a, image_b, hom):
+    result = cv2.warpPerspective(image_a, hom, (image_a.shape[1] + image_b.shape[1], image_a.shape[0]))
+    result[0:image_b.shape[0], 0:image_b.shape[1]] = image_b
+    return result
+
 
 def main(args):
     images = load_images(args.folder)
-    kp_a, desc_a = get_sift(images[3][0])
-    kp_b, desc_b = get_sift(images[1][0])
+    image_a = images[0][0]
+    image_b = images[1][0]
+    kp_a, desc_a = get_sift(image_a)
+    kp_b, desc_b = get_sift(image_b)
 
     matches, H, status = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
 
-    show_matches(images[3][0], images[1][0], kp_a, kp_b, matches, status)
+    #show_matches(images[3][0], images[1][0], kp_a, kp_b, matches, status)
+    cv2.imshow('stitch result', stitch_images(image_a, image_b, H))
+    cv2.waitKey()
 
 
 if __name__ == "__main__":
