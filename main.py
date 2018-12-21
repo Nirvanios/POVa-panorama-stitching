@@ -16,6 +16,11 @@ parser.add_argument('--dest', help='destination of output image')
 
 
 def load_images(folder):
+    """
+    Get list of images in a folder
+    :param folder: folder containing images
+    :return: list of images and their names
+    """
     filenames = glob.glob(folder + "/*.png")
     images = [cv2.imread(img) for img in filenames]
     ret = []
@@ -86,12 +91,12 @@ def show_matches(image_a, image_b, key_points_a, key_points_b, matches, status):
 
 def main(args):
     images = load_images(args.folder)
-    kp_a, desc_a = get_sift(images[0][0])
+    kp_a, desc_a = get_sift(images[3][0])
     kp_b, desc_b = get_sift(images[1][0])
 
     matches, H, status = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
 
-    show_matches(images[0][0], images[1][0], kp_a, kp_b, matches, status)
+    show_matches(images[3][0], images[1][0], kp_a, kp_b, matches, status)
 
 
 if __name__ == "__main__":
