@@ -17,8 +17,7 @@ def get_sift(image):
     Get key points detected by SIFT
     """
     gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    key_points = sift.detect(gray_scale_image, None)
-    return key_points
+    return sift.detectAndCompute(gray_scale_image, None)
 
 
 def main():
