@@ -60,7 +60,7 @@ def match_keypoints(key_points_a, key_points_b, descriptors_a, descriptors_b,
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
             matches.append((m[0].trainIdx, m[0].queryIdx))
 
-    if len(matches) > 50:
+    if len(matches) > 100:
         points_a = np.float32([key_points_a[i] for (_, i) in matches])
         points_b = np.float32([key_points_b[i] for (i, _) in matches])
 
@@ -75,7 +75,7 @@ def match_keypoints(key_points_a, key_points_b, descriptors_a, descriptors_b,
 def show_matches(image_a, image_b, key_points_a, key_points_b, matches, status):
     (hA, wA) = image_a.shape[:2]
     (hB, wB) = image_b.shape[:2]
-    result = np.zeros((max(hA, hB), wA + wB, 3), dtype="uint8")
+    result = np.zeros((max(hA, hB), wA + wB), dtype="uint8")
     result[0:hA, 0:wA] = image_a
     result[0:hB, wA:] = image_b
 
@@ -116,24 +116,61 @@ def crop_black(image):
     crop = image[y:y + h, x:x + w]
     return crop
 
+def warpImages(img1, img2, H):
+    rows1, cols1 = img1.shape[:2]
+    rows2, cols2 = img2.shape[:2]
+
+    list_of_points_1 = np.float32([[0,0], [0,rows1], [cols1, rows1], [cols1,0]]).reshape(-1,1,2)
+    temp_points = np.float32([[0,0], [0,rows2], [cols2, rows2], [cols2,0]]).reshape(-1,1,2)
+
+    list_of_points_2 = cv2.perspectiveTransform(temp_points, H)
+    list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
+
+    [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
+    [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel() + 0.5)
+
+    translation_dist = [-x_min, -y_min]
+    H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0,0,1]])
+
+    output_img = cv2.warpPerspective(img2, H_translation.dot(H), (x_max - x_min, y_max - y_min))
+    output_img[translation_dist[1]:rows1+translation_dist[1],translation_dist[0]:cols1+translation_dist[0]] = img1
+    return output_img
+
+
 
 def main(args):
     images = load_images(args.folder)
+    addedFlags = [False for img in images]
 
-    panorama = images[0][0]
-    print("Base image:" + images[0][1])
-    for i in range(len(images)):
-        print("Current image:" + images[i][1])
-        kp_a, desc_a = get_sift(panorama)
-        kp_b, desc_b = get_sift(images[i][0])
-        m = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
-        if m is None:
-            continue
-        matches, H, status = m
-        # show_matches(panorama, images[i][0], kp_a, kp_b, matches, status)
-        panorama = stitch_images(panorama, images[i][0], H)
-        panorama = crop_black(panorama)
-        print(str(i) + "/" + str(len(images) - 1))
+    panorama = images[8][0]
+    addedFlags[8] = True
+    print("[INFO] Base image:" + images[0][1])
+    added = True
+    cnt = 0
+    while added:
+        added = False
+        for i in range(len(images)):
+            if addedFlags[i]:
+                continue
+            print("[INFO] Current image:" + images[i][1])
+            kp_a, desc_a = get_sift(panorama)
+            kp_b, desc_b = get_sift(images[i][0])
+            m = match_keypoints(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
+            if m is None:
+                continue
+            added = True
+            addedFlags[i] = True
+            matches, H, status = m
+            #show_matches(panorama, images[i][0], kp_a, kp_b, matches, status)
+            panorama = warpImages(images[i][0], panorama, H)#stitch_images(panorama, images[i][0], H)
+            panorama = crop_black(panorama)
+            #cv2.imshow('panorama', panorama)
+            #cv2.waitKey()
+            cv2.imwrite("/Users/petr/Desktop/images/output/out" + str(cnt) + ".png", panorama)
+            cnt += 1
+            print("[INFO] " + str(i) + "/" + str(len(images) - 1))
+        print("[INFO] next iteration")
+    print("[INFO] stitching done")
 
     cv2.imshow('stitch result', panorama)
     cv2.waitKey()
