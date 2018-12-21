@@ -7,14 +7,14 @@ import glob
 import os
 
 sift = cv2.xfeatures2d.SIFT_create()
-matcher = cv2.DescriptorMatcher_create()
+matcher = cv2.DescriptorMatcher_create("BruteForce")
 
 parser = argparse.ArgumentParser(description='Panorama stitching.')
 parser.add_argument('--folder', help='path to file with images')
 parser.add_argument('--img', help='path to main image')
 parser.add_argument('--dest', help='destination of output image')
 
-<<<<<<< HEAD
+
 def load_images(folder):
     filenames = glob.glob(folder + "/*.png")
     images = [cv2.imread(img) for img in filenames]
@@ -22,11 +22,12 @@ def load_images(folder):
     for i in range(len(filenames)):
         ret.append([images[i], os.path.basename(filenames[i])])
     return ret
-=======
+
 
 def get_sift(image):
     """
     Get key points detected by SIFT
+    :param image: input image
     """
     gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     key_points, descriptors = sift.detectAndCompute(gray_scale_image, None)
@@ -37,6 +38,16 @@ def get_sift(image):
 
 def match_keypoints(key_points_a, key_points_b, descriptors_a, descriptors_b,
                     ratio, threshold):
+    """
+    match key points given by SIFT
+    :param key_points_a: key points of first image
+    :param key_points_b: key points of second image
+    :param descriptors_a: descriptors of first image
+    :param descriptors_b: descriptors of second image
+    :param ratio:
+    :param threshold:
+    :return: matches and homography if
+    """
     raw_matches = matcher.knnMatch(descriptors_a, descriptors_b, 2)
     matches = []
 
@@ -52,7 +63,6 @@ def match_keypoints(key_points_a, key_points_b, descriptors_a, descriptors_b,
                                          threshold)
 
         return matches, H, status
->>>>>>> acd16e008cbf362f20019dca6c7c43849d4348cc
 
     return None
 
@@ -78,13 +88,7 @@ def main(args):
     print("Hello world")
     print("dzea")
     images = load_images(args.folder)
-    print(args)
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    args = parser.parse_args()
-    main()
-=======
     main(parser.parse_args())
->>>>>>> acd16e008cbf362f20019dca6c7c43849d4348cc
