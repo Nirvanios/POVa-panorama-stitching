@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description='Panorama stitching.')
 parser.add_argument('--folder', help='path to file with images')
 parser.add_argument('--img', help='path to main image')
 parser.add_argument('--dest', help='destination of output image')
+parser.add_argument('--out', help='destination of debug output')
 parser.add_argument('--sift', default=True)
 parser.add_argument('--surf', default=False)
 
@@ -85,7 +86,7 @@ def main(args):
             panorama.image = Stitcher.stitch_images(images[i].image, panorama.image, H)
             panorama.image = PanoUtils.crop_black(panorama.image)
 
-            save_location = "/Users/petr/Desktop/images/output/out" + str(cnt) + ".png"
+            save_location = args.out + str(cnt) + ".png"
             print("[DEBUG] saving intermediate result to: " + save_location)
             cv2.imwrite(save_location, panorama.image)
             cnt += 1
