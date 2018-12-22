@@ -1,14 +1,10 @@
-import string
-import sys
-import cv2
-import numpy as np
 import argparse
-import glob
-import os
 
-from src.Matcher import Matcher
-from src.Matcher import KeyPointDetector
+import cv2
+
 import src.Utils as PanoUtils
+from src.Matcher import KeyPointDetector
+from src.Matcher import Matcher
 from src.Stitcher import Stitcher
 
 parser = argparse.ArgumentParser(description='Panorama stitching.')
