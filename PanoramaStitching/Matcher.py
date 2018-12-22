@@ -27,7 +27,7 @@ class Matcher:
         Get key points detected by SIFT/SURF
         :param image: input image
         """
-        gray_scale_image = image
+        gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         key_points, descriptors = self.featureDetector.detectAndCompute(gray_scale_image, None)
 
         key_points = np.float32([key_point.pt for key_point in key_points])
@@ -53,7 +53,7 @@ class Matcher:
                 matches.append((m[0].trainIdx, m[0].queryIdx))
 
         if self.enable_log:
-            print("[INFO] matches: " + str(len(matches)))
+            print("[DEBUG] matches: " + str(len(matches)))
         if len(matches) > self.matches_required:
             points_a = np.float32([key_points_a[i] for (_, i) in matches])
             points_b = np.float32([key_points_b[i] for (i, _) in matches])
