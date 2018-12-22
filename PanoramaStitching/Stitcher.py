@@ -2,6 +2,8 @@ import cv2
 
 import numpy as np
 
+from PanoramaStitching.Blender import Blender
+
 
 class Stitcher:
 
@@ -23,6 +25,7 @@ class Stitcher:
         h_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
 
         output_img = cv2.warpPerspective(img2, h_translation.dot(H), (x_max - x_min, y_max - y_min))
+        # Blender.alpha_blend(img1, output_img, translation_dist)
         output_img[translation_dist[1]:rows1 + translation_dist[1],
         translation_dist[0]:cols1 + translation_dist[0]] = img1
         return output_img
