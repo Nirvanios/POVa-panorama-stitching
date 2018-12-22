@@ -49,17 +49,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
     print("Total allocated size: %.1f KiB" % (total / 1024))
 
 
-def main(args):
-    global matcher
-    if args.sift:
-        matcher = Matcher(KeyPointDetector.SIFT, 100)
-    if args.surf:
-        matcher = Matcher(KeyPointDetector.SURF, 100)
-    images = PanoUtils.load_images(args.folder)
-
-    for img in images:
-        img.calculate_descriptors(matcher)
-
+def simple_panorama(args, images):
     panorama = images[8]
     logger_instance.log(LogLevel.INFO, "Base image: " + images[8].name)
     added = True
@@ -74,7 +64,7 @@ def main(args):
             panorama.calculate_descriptors(matcher)
             kp_a, desc_a = panorama.get_descriptors()
             kp_b, desc_b = images[i].get_descriptors()
-            m = matcher.match_key_points(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
+            m = matcher.match_key_points(kp_a, kp_b, desc_a, desc_b, 0.7, 4.5)
             if m is None:
                 logger_instance.log(LogLevel.INFO, "not enough matches, skipping")
                 logger_instance.log(LogLevel.NONE, "__________________________________________________________________")
@@ -82,6 +72,8 @@ def main(args):
             added = True
             images[i].checked = True
             matches, H, status = m
+
+            # matcher.show_matches(panorama.image, images[i].image, kp_a, kp_b, matches, status)
 
             logger_instance.log(LogLevel.INFO, "matched, stitching")
             panorama.image = Stitcher.stitch_images(images[i].image, panorama.image, H)
@@ -96,10 +88,37 @@ def main(args):
                 display_top(snapshot)
             logger_instance.log(LogLevel.NONE, "__________________________________________________________________")
         logger_instance.log(LogLevel.INFO, "Next iteration")
+        logger_instance.log(LogLevel.DEBUG, "Added: " + str(added))
+        logger_instance.log(LogLevel.NONE, "__________________________________________________________________")
     logger_instance.log(LogLevel.INFO, "stitching done, matched " + str(cnt) + "/" + str(len(images) - 1))
+    logger_instance.log(LogLevel.INFO, "List of stitched files:")
+
+    for img in images:
+        if img.checked:
+            logger_instance.log(LogLevel.NONE, "\t" + img.name)
 
     cv2.imwrite(args.dest, panorama.image)
     cv2.waitKey()
+
+
+def panorama(args, images):
+    print("taco man")
+
+
+def main(args):
+    global matcher
+    if args.sift:
+        matcher = Matcher(KeyPointDetector.SIFT, 40)
+    if args.surf:
+        matcher = Matcher(KeyPointDetector.SURF, 40)
+    images = PanoUtils.load_images(args.folder)
+
+    for img in images:
+        img.calculate_descriptors(matcher)
+
+    simple_panorama(args, images)
+
+
 
 
 if __name__ == "__main__":

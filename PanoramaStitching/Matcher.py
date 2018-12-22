@@ -36,7 +36,7 @@ class Matcher:
     def match_key_points(self, key_points_a, key_points_b, descriptors_a, descriptors_b,
                          ratio, threshold):
         """
-        match key points given by SIFT
+        match key points given by SIFT/SURF
         :param key_points_a: key points of first image
         :param key_points_b: key points of second image
         :param descriptors_a: descriptors of first image
@@ -64,7 +64,8 @@ class Matcher:
 
         return None
 
-    def show_matches(self, image_a, image_b, key_points_a, key_points_b, matches, status):
+    @staticmethod
+    def show_matches(image_a, image_b, key_points_a, key_points_b, matches, status):
         """
         Show window with matched keypoints
         :param image_a: first image
@@ -76,7 +77,7 @@ class Matcher:
         """
         (hA, wA) = image_a.shape[:2]
         (hB, wB) = image_b.shape[:2]
-        result = np.zeros((max(hA, hB), wA + wB), dtype="uint8")
+        result = np.zeros((max(hA, hB), wA + wB, 3), dtype="uint8")
         result[0:hA, 0:wA] = image_a
         result[0:hB, wA:] = image_b
 

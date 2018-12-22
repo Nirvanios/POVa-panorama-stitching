@@ -13,7 +13,7 @@ def load_images(folder):
     :return: list of images and their names
     """
     filenames = glob.glob(folder + "/*.png")
-    images = [cv2.imread(img) for img in filenames]
+    images = [cv2.resize(cv2.imread(img), (480, 320)) for img in filenames]
     ret = []
     for i in range(len(filenames)):
         pan_image = PanoramaImage(os.path.basename(filenames[i]), images[i])
