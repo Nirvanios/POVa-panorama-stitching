@@ -2,6 +2,8 @@ from enum import Enum
 import cv2
 import numpy as np
 
+from PanoramaStitching.Logger import logger_instance, LogLevel
+
 
 class KeyPointDetector(Enum):
     SIFT = 1
@@ -10,15 +12,13 @@ class KeyPointDetector(Enum):
 
 class Matcher:
 
-    def __init__(self, detector_type, matches_required, enable_log=True):
+    def __init__(self, detector_type, matches_required):
         if detector_type == KeyPointDetector.SIFT:
             self.featureDetector = cv2.xfeatures2d.SIFT_create()
         if detector_type == KeyPointDetector.SURF:
             self.featureDetector = cv2.xfeatures2d.SURF_create()
 
         self.matcher = cv2.DescriptorMatcher_create("BruteForce")
-
-        self.enable_log = enable_log
 
         self.matches_required = matches_required
 
@@ -52,8 +52,7 @@ class Matcher:
             if len(m) == 2 and m[0].distance < m[1].distance * ratio:
                 matches.append((m[0].trainIdx, m[0].queryIdx))
 
-        if self.enable_log:
-            print("[DEBUG] matches: " + str(len(matches)))
+        logger_instance.log(LogLevel.DEBUG, "matches: " + str(len(matches)))
         if len(matches) > self.matches_required:
             points_a = np.float32([key_points_a[i] for (_, i) in matches])
             points_b = np.float32([key_points_b[i] for (i, _) in matches])

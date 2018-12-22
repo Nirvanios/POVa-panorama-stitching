@@ -1,16 +1,16 @@
 import argparse
-
-import cv2
-
-import tracemalloc
-from collections import Counter
 import linecache
 import os
+import tracemalloc
+
+import cv2
 
 import PanoramaStitching.Utils as PanoUtils
 from PanoramaStitching.Matcher import KeyPointDetector
 from PanoramaStitching.Matcher import Matcher
 from PanoramaStitching.Stitcher import Stitcher
+from PanoramaStitching.Logger import logger_instance
+from PanoramaStitching.Logger import LogLevel
 
 show_mem = False
 
@@ -61,7 +61,7 @@ def main(args):
         img.calculate_descriptors(matcher)
 
     panorama = images[8]
-    print("[INFO] Base image: " + images[8].name)
+    logger_instance.log(LogLevel.INFO, "Base image: " + images[8].name)
     added = True
     cnt = 0
     while added:
@@ -69,33 +69,34 @@ def main(args):
         for i in range(len(images)):
             if images[i].checked:
                 continue
-            print("[INFO] Current image: " + images[i].name)
+            logger_instance.log(LogLevel.INFO, "Current image: " + images[i].name)
+
             panorama.calculate_descriptors(matcher)
             kp_a, desc_a = panorama.get_descriptors()
             kp_b, desc_b = images[i].get_descriptors()
             m = matcher.match_key_points(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
             if m is None:
-                print("[INFO] not enough matches, skipping")
-                print("__________________________________________________________________")
+                logger_instance.log(LogLevel.INFO, "not enough matches, skipping")
+                logger_instance.log(LogLevel.NONE, "__________________________________________________________________")
                 continue
             added = True
             images[i].checked = True
             matches, H, status = m
 
-            print("[INFO] matched, stitching")
+            logger_instance.log(LogLevel.INFO, "matched, stitching")
             panorama.image = Stitcher.stitch_images(images[i].image, panorama.image, H)
             panorama.image = PanoUtils.crop_black(panorama.image)
 
             save_location = args.out + str(cnt) + ".png"
-            print("[DEBUG] saving intermediate result to: " + save_location)
+            logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
             cv2.imwrite(save_location, panorama.image)
             cnt += 1
             if show_mem:
                 snapshot = tracemalloc.take_snapshot()
                 display_top(snapshot)
-            print("__________________________________________________________________")
-        print("[INFO] next iteration")
-    print("[INFO] stitching done, matched " + str(cnt) + "/" + str(len(images) - 1))
+            logger_instance.log(LogLevel.NONE, "__________________________________________________________________")
+        logger_instance.log(LogLevel.INFO, "Next iteration")
+    logger_instance.log(LogLevel.INFO, "stitching done, matched " + str(cnt) + "/" + str(len(images) - 1))
 
     cv2.imwrite(args.dest, panorama.image)
     cv2.waitKey()
