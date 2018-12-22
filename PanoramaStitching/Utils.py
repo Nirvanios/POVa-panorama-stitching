@@ -3,7 +3,7 @@ import os
 import cv2
 import glob
 
-from src.PanoramaImage import PanoramaImage
+from PanoramaStitching.PanoramaImage import PanoramaImage
 
 
 def load_images(folder):

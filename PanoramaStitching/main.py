@@ -2,10 +2,10 @@ import argparse
 
 import cv2
 
-import src.Utils as PanoUtils
-from src.Matcher import KeyPointDetector
-from src.Matcher import Matcher
-from src.Stitcher import Stitcher
+import PanoramaStitching.Utils as PanoUtils
+from PanoramaStitching.Matcher import KeyPointDetector
+from PanoramaStitching.Matcher import Matcher
+from PanoramaStitching.Stitcher import Stitcher
 
 parser = argparse.ArgumentParser(description='Panorama stitching.')
 parser.add_argument('--folder', help='path to file with images')
