@@ -23,6 +23,9 @@ def main(args):
         matcher = Matcher(KeyPointDetector.SURF, 100)
     images = PanoUtils.load_images(args.folder)
 
+    for img in images:
+        img.calculate_descriptors(matcher)
+
     panorama = images[8]
     print("[INFO] Base image: " + images[8].name)
     added = True
@@ -34,7 +37,7 @@ def main(args):
                 continue
             print("[INFO] Current image: " + images[i].name)
             panorama.calculate_descriptors(matcher)
-            images[i].calculate_descriptors(matcher)
+            #images[i].calculate_descriptors(matcher)
             kp_a, desc_a = panorama.get_descriptors()
             kp_b, desc_b = images[i].get_descriptors()
             m = matcher.match_key_points(kp_a, kp_b, desc_a, desc_b, 0.75, 4.5)
