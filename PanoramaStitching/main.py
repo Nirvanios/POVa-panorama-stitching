@@ -108,6 +108,7 @@ def panorama(args, images):
 
     added = True
     cnt = 0
+    logger_instance.log(LogLevel.STATUS, "Starting main panorama loop")
     while added:
         added = False
 
@@ -131,19 +132,27 @@ def panorama(args, images):
             logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
             cv2.imwrite(save_location, panorama_image.image)
             cnt += 1
+            logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
 
+    w, h, _ = panorama_image.image.shape
+    panorama_image.image = Stitcher.projectOntoCylinder(panorama_image.image, (w / 2, h - 1000), 2000)
     cv2.imshow('pano', panorama_image.image)
+    logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
+    cv2.imwrite(args.dest, panorama_image.image)
     cv2.waitKey()
 
 
 def main(args):
     global matcher
     if args.sift:
+        logger_instance.log(LogLevel.STATUS, "Usign SIFT")
         matcher = Matcher(KeyPointDetector.SIFT, 4)
     if args.surf:
+        logger_instance.log(LogLevel.STATUS, "Usign SURF")
         matcher = Matcher(KeyPointDetector.SURF, 4)
     images = PanoUtils.load_images(args.folder)
 
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
     for img in images:
         img.calculate_descriptors(matcher)
 

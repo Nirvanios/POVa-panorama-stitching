@@ -33,7 +33,7 @@ def stitch_images(img1, img2, homography_matrix):
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
 
-    #img2 = projectOntoCylinder(img2, (rows2 / 2, cols2 / 2), -500)
+    img2 = projectOntoCylinder(img2, (rows2 / 2, cols2 / 2), 0)
 
     list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
     temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
