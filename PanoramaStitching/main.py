@@ -9,7 +9,7 @@ import PanoramaStitching.Utils as PanoUtils
 from PanoramaStitching.Matcher import KeyPointDetector
 from PanoramaStitching.Matcher import Matcher
 from PanoramaStitching.PanoramaImage import MainPanoramaImage
-from PanoramaStitching.Stitcher import Stitcher
+import PanoramaStitching.Stitcher as Stitcher
 from PanoramaStitching.Logger import logger_instance
 from PanoramaStitching.Logger import LogLevel
 
@@ -103,8 +103,8 @@ def simple_panorama(args, images):
 
 
 def panorama(args, images):
-    panorama_image = MainPanoramaImage(images[0].name, images[0].image)
-    images[0].checked = True
+    panorama_image = MainPanoramaImage(images[15].name, images[15].image)
+    images[15].checked = True
 
     added = True
     cnt = 0
@@ -121,11 +121,10 @@ def panorama(args, images):
 
         if not index == -1:
             matches, h, status = panorama_image.matches[index][0]
-            matcher.show_matches(panorama_image.image, panorama_image.matches[index][1].image,
-                                 panorama_image.key_points, panorama_image.matches[index][1].key_points,
-                                 matches, status)
-            panorama_image.image = Stitcher.stitch_images(panorama_image.matches[index][1].image, panorama_image.image,
+            panorama_image.image = Stitcher.stitch_images(panorama_image.image, panorama_image.matches[index][1].image,
                                                           h)
+            panorama_image.image = PanoUtils.crop_black(panorama_image.image)
+            logger_instance.log(LogLevel.INFO, "Stitching with: " + panorama_image.matches[index][1].name)
             panorama_image.matches[index][1].checked = True
             added = True
             save_location = args.out + str(cnt) + ".png"
@@ -140,9 +139,9 @@ def panorama(args, images):
 def main(args):
     global matcher
     if args.sift:
-        matcher = Matcher(KeyPointDetector.SIFT, 40)
+        matcher = Matcher(KeyPointDetector.SIFT, 20)
     if args.surf:
-        matcher = Matcher(KeyPointDetector.SURF, 40)
+        matcher = Matcher(KeyPointDetector.SURF, 20)
     images = PanoUtils.load_images(args.folder)
 
     for img in images:

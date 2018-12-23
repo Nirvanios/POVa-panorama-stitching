@@ -25,7 +25,10 @@ class MainPanoramaImage(PanoramaImage):
 
         for img in images:
             if not img.checked:
-                m = matcher.match_key_points(self.key_points, img.key_points, self.descriptors, img.descriptors, 0.7,
+                #m = matcher.match_key_points(self.key_points, img.key_points, self.descriptors, img.descriptors, 0.7,
+                #                             4.5)
+
+                m = matcher.match_key_points(img.key_points, self.key_points, img.descriptors, self.descriptors, 0.7,
                                              4.5)
                 if m is None:
                     continue
