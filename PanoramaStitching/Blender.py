@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 class Blender:
 
     @staticmethod
@@ -15,7 +16,8 @@ class Blender:
         rows, cols = image_a.shape[:2]
 
         black_a = np.zeros(image_b.shape, dtype=np.uint8)
-        black_a[translation_dist[1]:rows+translation_dist[1], translation_dist[0]:cols+translation_dist[0]] = image_a
+        black_a[translation_dist[1]:rows + translation_dist[1],
+        translation_dist[0]:cols + translation_dist[0]] = image_a
         gray_a = cv2.cvtColor(black_a, cv2.COLOR_BGR2GRAY)
         gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
         mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]

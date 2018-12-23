@@ -8,6 +8,7 @@ import cv2
 import PanoramaStitching.Utils as PanoUtils
 from PanoramaStitching.Matcher import KeyPointDetector
 from PanoramaStitching.Matcher import Matcher
+from PanoramaStitching.PanoramaImage import MainPanoramaImage
 from PanoramaStitching.Stitcher import Stitcher
 from PanoramaStitching.Logger import logger_instance
 from PanoramaStitching.Logger import LogLevel
@@ -50,7 +51,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
 
 
 def simple_panorama(args, images):
-    panorama = images[8]
+    panorama_image = images[8]
     logger_instance.log(LogLevel.INFO, "Base image: " + images[8].name)
     added = True
     cnt = 0
@@ -61,8 +62,8 @@ def simple_panorama(args, images):
                 continue
             logger_instance.log(LogLevel.INFO, "Current image: " + images[i].name)
 
-            panorama.calculate_descriptors(matcher)
-            kp_a, desc_a = panorama.get_descriptors()
+            panorama_image.calculate_descriptors(matcher)
+            kp_a, desc_a = panorama_image.get_descriptors()
             kp_b, desc_b = images[i].get_descriptors()
             m = matcher.match_key_points(kp_a, kp_b, desc_a, desc_b, 0.7, 4.5)
             if m is None:
@@ -76,12 +77,12 @@ def simple_panorama(args, images):
             # matcher.show_matches(panorama.image, images[i].image, kp_a, kp_b, matches, status)
 
             logger_instance.log(LogLevel.INFO, "matched, stitching")
-            panorama.image = Stitcher.stitch_images(images[i].image, panorama.image, H)
-            panorama.image = PanoUtils.crop_black(panorama.image)
+            panorama_image.image = Stitcher.stitch_images(images[i].image, panorama_image.image, H)
+            panorama_image.image = PanoUtils.crop_black(panorama_image.image)
 
             save_location = args.out + str(cnt) + ".png"
             logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
-            cv2.imwrite(save_location, panorama.image)
+            cv2.imwrite(save_location, panorama_image.image)
             cnt += 1
             if show_mem:
                 snapshot = tracemalloc.take_snapshot()
@@ -97,12 +98,42 @@ def simple_panorama(args, images):
         if img.checked:
             logger_instance.log(LogLevel.NONE, "\t" + img.name)
 
-    cv2.imwrite(args.dest, panorama.image)
+    cv2.imwrite(args.dest, panorama_image.image)
     cv2.waitKey()
 
 
 def panorama(args, images):
-    print("taco man")
+    panorama_image = MainPanoramaImage(images[0].name, images[0].image)
+    images[0].checked = True
+
+    added = True
+    cnt = 0
+    while added:
+        added = False
+
+        panorama_image.calculate_descriptors(matcher)
+
+        panorama_image.calculate_matches(images, matcher)
+
+        match_count, index = panorama_image.find_best_match()
+
+        logger_instance.log(LogLevel.DEBUG, "Index: " + str(index) + " Cnt: " + str(match_count))
+
+        if not index == -1:
+            matches, h, status = panorama_image.matches[index][0]
+            matcher.show_matches(panorama_image.image, panorama_image.matches[index][1].image,
+                                 panorama_image.key_points, panorama_image.matches[index][1].key_points,
+                                 matches, status)
+            panorama_image.image = Stitcher.stitch_images(panorama_image.matches[index][1].image, panorama_image.image, h)
+            panorama_image.matches[index][1].checked = True
+            added = True
+            save_location = args.out + str(cnt) + ".png"
+            logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
+            cv2.imwrite(save_location, panorama_image.image)
+            cnt += 1
+
+    cv2.imshow('pano', panorama_image.image)
+    cv2.waitKey()
 
 
 def main(args):
@@ -116,9 +147,7 @@ def main(args):
     for img in images:
         img.calculate_descriptors(matcher)
 
-    simple_panorama(args, images)
-
-
+    panorama(args, images)
 
 
 if __name__ == "__main__":
