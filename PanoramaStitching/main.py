@@ -102,9 +102,9 @@ def simple_panorama(args, images):
     cv2.waitKey()
 
 
-def panorama(args, images):
-    panorama_image = MainPanoramaImage(images[15].name, images[15].image)
-    images[15].checked = True
+def panorama(args, main_image, images):
+    panorama_image = MainPanoramaImage(main_image.name, main_image.image)
+    main_image.checked = True
 
     added = True
     cnt = 0
@@ -135,7 +135,7 @@ def panorama(args, images):
             logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
 
     w, h, _ = panorama_image.image.shape
-    panorama_image.image = Stitcher.projectOntoCylinder(panorama_image.image, (w / 2, h - 1000), 2000)
+
     cv2.imshow('pano', panorama_image.image)
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
     cv2.imwrite(args.dest, panorama_image.image)
@@ -144,15 +144,34 @@ def panorama(args, images):
     logger_instance.log(LogLevel.INFO, "List of images used in panorama:")
     for img in images:
         if img.checked:
-            logger_instance.log(LogLevel.NONE, img.name)
+            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 
     logger_instance.log(LogLevel.INFO, "List of images NOT used in panorama:")
     for img in images:
         if not img.checked:
-            logger_instance.log(LogLevel.NONE, img.name)
+            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 
 
 def main(args):
+    images = PanoUtils.load_images(args.folder)
+    logger_instance.log(LogLevel.STATUS, "Images in folder:")
+    for img in images:
+        logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
+
+    for x in images:
+        if x.name == os.path.basename(args.img):
+            break
+    else:
+        x = None
+
+    if x is None:
+        logger_instance.log(LogLevel.ERROR, "File \"" + os.path.basename(args.img) + "\" not found")
+        return
+
+    main_image = x
+    logger_instance.log(LogLevel.STATUS, "Main image:")
+    logger_instance.log(LogLevel.NONE, "\t\t" + main_image.name)
+
     global matcher
     if args.sift:
         logger_instance.log(LogLevel.STATUS, "Usign SIFT")
@@ -160,13 +179,12 @@ def main(args):
     if args.surf:
         logger_instance.log(LogLevel.STATUS, "Usign SURF")
         matcher = Matcher(KeyPointDetector.SURF, 4)
-    images = PanoUtils.load_images(args.folder)
 
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
     for img in images:
         img.calculate_descriptors(matcher)
 
-    panorama(args, images)
+    panorama(args, main_image, images)
 
 
 if __name__ == "__main__":

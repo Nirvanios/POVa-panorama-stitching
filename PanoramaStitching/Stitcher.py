@@ -4,9 +4,9 @@ import numpy as np
 from PanoramaStitching import Blender
 
 
-def projectOntoCylinder(img, center, focal):
+def project_on_cylinder(img, center, focal):
     """
-        Performs a cylindrical projection of a planar image.
+    Performs a cylindrical projection of a planar image.
     """
 
     if not focal:
@@ -17,23 +17,30 @@ def projectOntoCylinder(img, center, focal):
     mapX = lambda y, x: focal * np.tan(x / scale)
     mapY = lambda y, x: focal / np.cos(x / scale) * y / scale
 
-    def makeMap(y, x):
+    def make_map(y, x):
         map_x = mapX(y - center[1], x - center[0]) + center[0]
         map_y = mapY(y - center[1], x - center[0]) + center[1]
         return np.dstack((map_x, map_y)).astype(np.int16)
 
     # create the LUTs for x and y coordinates
-    map_xy = np.fromfunction(makeMap, img.shape[:2], dtype=np.int16)
+    map_xy = np.fromfunction(make_map, img.shape[:2], dtype=np.int16)
     img_mapped = cv2.remap(img, map_xy, None, cv2.INTER_NEAREST)
 
     return img_mapped
 
 
 def stitch_images(img1, img2, homography_matrix):
+    """
+    Stitch two images together. Applies homography_matrix on the second image
+    :param img1:
+    :param img2:
+    :param homography_matrix:
+    :return:
+    """
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
 
-    img2 = projectOntoCylinder(img2, (rows2 / 2, cols2 / 2), 0)
+    img2 = project_on_cylinder(img2, (rows2 / 2, cols2 / 2), 0)
 
     list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
     temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)

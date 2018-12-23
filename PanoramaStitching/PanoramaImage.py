@@ -1,5 +1,3 @@
-from PanoramaStitching.Matcher import Matcher
-
 
 class PanoramaImage:
     checked = False
@@ -21,13 +19,16 @@ class MainPanoramaImage(PanoramaImage):
     matches = []
 
     def calculate_matches(self, images, matcher):
+        """
+        Calculate matches between panorama image and remaining unused images
+        :param images: list of images
+        :param matcher: key point matcher
+        :return:
+        """
         self.matches.clear()
 
         for img in images:
             if not img.checked:
-                #m = matcher.match_key_points(self.key_points, img.key_points, self.descriptors, img.descriptors, 0.7,
-                #                             4.5)
-
                 m = matcher.match_key_points(img.key_points, self.key_points, img.descriptors, self.descriptors, 0.7,
                                              4.5)
                 if m is None:
@@ -36,6 +37,10 @@ class MainPanoramaImage(PanoramaImage):
                 self.matches.append((m, img))
 
     def find_best_match(self):
+        """
+        Find best match for stitching
+        :return: amount of matches and index of the image
+        """
         max_matches = 0
         max_index = -1
         cnt = 0

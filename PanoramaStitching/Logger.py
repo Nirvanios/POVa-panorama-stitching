@@ -4,6 +4,9 @@ import datetime
 
 
 class LogLevel(Enum):
+    """
+    Enum for different types of log messages.
+    """
     INFO = 0
     DEBUG = 1
     ERROR = 2
@@ -11,6 +14,10 @@ class LogLevel(Enum):
     STATUS = 4
 
     def get_color(self):
+        """
+        Get console color code for log level
+        :return: color code escape string
+        """
         if self == LogLevel.INFO:
             return BColors.OKBLUE
         if self == LogLevel.DEBUG:
@@ -35,8 +42,15 @@ class BColors:
 
 
 class Logger:
-
+    """
+    Stdout/stderr logger
+    """
     def __init__(self, print_debug=False, print_time=False):
+        """
+
+        :param print_debug: print messages marked LogLevel.DEBUG
+        :param print_time: print time with the message
+        """
         self.print_debug = print_debug
         self.print_time = print_time
 
@@ -59,9 +73,9 @@ class Logger:
                 to_print = color + "[" + log_level.name + "]" + tab_form + message + BColors.ENDC
 
         if log_level == LogLevel.ERROR:
-            print(to_print, file=sys.stderr)
+            print(to_print, file=sys.stderr, flush=True)
         else:
-            print(to_print)
+            print(to_print, flush=True)
 
 
-logger_instance = Logger(print_debug=True, print_time=True)
+logger_instance = Logger(print_debug=False, print_time=True)
