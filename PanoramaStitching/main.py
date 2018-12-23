@@ -124,7 +124,8 @@ def panorama(args, images):
             matcher.show_matches(panorama_image.image, panorama_image.matches[index][1].image,
                                  panorama_image.key_points, panorama_image.matches[index][1].key_points,
                                  matches, status)
-            panorama_image.image = Stitcher.stitch_images(panorama_image.matches[index][1].image, panorama_image.image, h)
+            panorama_image.image = Stitcher.stitch_images(panorama_image.matches[index][1].image, panorama_image.image,
+                                                          h)
             panorama_image.matches[index][1].checked = True
             added = True
             save_location = args.out + str(cnt) + ".png"

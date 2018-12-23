@@ -23,9 +23,6 @@ class Blender:
         mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]
         mask_b = cv2.threshold(gray_b, 1, 255, cv2.THRESH_BINARY)[1]
 
-        # cv2.imshow('maskA', mask_a)
-        # cv2.imshow('maskB', mask_b)
-
         mask = cv2.bitwise_and(mask_a, mask_b)
 
         contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
