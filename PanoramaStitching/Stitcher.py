@@ -4,9 +4,36 @@ import numpy as np
 from PanoramaStitching import Blender
 
 
+def projectOntoCylinder(img, center, focal):
+    """
+        Performs a cylindrical projection of a planar image.
+    """
+
+    if not focal:
+        focal = 750
+
+    # define mapping functions
+    scale = focal
+    mapX = lambda y, x: focal * np.tan(x / scale)
+    mapY = lambda y, x: focal / np.cos(x / scale) * y / scale
+
+    def makeMap(y, x):
+        map_x = mapX(y - center[1], x - center[0]) + center[0]
+        map_y = mapY(y - center[1], x - center[0]) + center[1]
+        return np.dstack((map_x, map_y)).astype(np.int16)
+
+    # create the LUTs for x and y coordinates
+    map_xy = np.fromfunction(makeMap, img.shape[:2], dtype=np.int16)
+    img_mapped = cv2.remap(img, map_xy, None, cv2.INTER_NEAREST)
+
+    return img_mapped
+
+
 def stitch_images(img1, img2, homography_matrix):
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
+
+    #img2 = projectOntoCylinder(img2, (rows2 / 2, cols2 / 2), -500)
 
     list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
     temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
@@ -24,16 +51,17 @@ def stitch_images(img1, img2, homography_matrix):
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
 
-    Blender.alpha_blend(img1, output_img, translation_dist)
+    #Blender.alpha_blend(img1, output_img, translation_dist)
 
     temp_image[translation_dist[1]:rows1 + translation_dist[1],
-               translation_dist[0]:cols1 + translation_dist[0]] = img1
+    translation_dist[0]:cols1 + translation_dist[0]] = img1
 
     width, height, _ = temp_image.shape
 
     for x in range(width):
         for y in range(height):
-            if not temp_image[x, y].all():
+            maxpix = temp_image[x, y].max()
+            if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
                 temp_image[x, y] = output_img[x, y]
 
     return temp_image
