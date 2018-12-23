@@ -141,6 +141,16 @@ def panorama(args, images):
     cv2.imwrite(args.dest, panorama_image.image)
     cv2.waitKey()
 
+    logger_instance.log(LogLevel.INFO, "List of images used in panorama:")
+    for img in images:
+        if img.checked:
+            logger_instance.log(LogLevel.NONE, img.name)
+
+    logger_instance.log(LogLevel.INFO, "List of images NOT used in panorama:")
+    for img in images:
+        if not img.checked:
+            logger_instance.log(LogLevel.NONE, img.name)
+
 
 def main(args):
     global matcher
@@ -162,4 +172,8 @@ def main(args):
 if __name__ == "__main__":
     if show_mem:
         tracemalloc.start()
-    main(parser.parse_args())
+
+    try:
+        main(parser.parse_args())
+    except Exception as e:
+        logger_instance.log(LogLevel.ERROR, "Error occured, exception type: " + e.__class__.__name__ + ", exception contents: " + str(e.args))
