@@ -35,7 +35,4 @@ def alpha_blend(image_a, image_b, translation_dist):
         if (x > ext_left) and (x < ext_right):
             value += step
 
-    cv2.imshow('result', result)
-    cv2.waitKey()
-
     return result

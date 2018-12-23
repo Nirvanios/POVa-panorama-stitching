@@ -20,8 +20,8 @@ parser.add_argument('--folder', help='path to file with images')
 parser.add_argument('--img', help='path to main image')
 parser.add_argument('--dest', help='destination of output image')
 parser.add_argument('--out', help='destination of debug output')
-parser.add_argument('--sift', default=True)
-parser.add_argument('--surf', default=False)
+parser.add_argument('--sift', default=True, help='Use SIFT for key point detection')
+parser.add_argument('--surf', default=False, help='Use SURF for key point detection')
 
 
 def display_top(snapshot, key_type='lineno', limit=3):
@@ -139,9 +139,9 @@ def panorama(args, images):
 def main(args):
     global matcher
     if args.sift:
-        matcher = Matcher(KeyPointDetector.SIFT, 20)
+        matcher = Matcher(KeyPointDetector.SIFT, 4)
     if args.surf:
-        matcher = Matcher(KeyPointDetector.SURF, 20)
+        matcher = Matcher(KeyPointDetector.SURF, 4)
     images = PanoUtils.load_images(args.folder)
 
     for img in images:

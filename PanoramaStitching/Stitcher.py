@@ -1,5 +1,4 @@
 import cv2
-
 import numpy as np
 
 from PanoramaStitching import Blender
@@ -22,7 +21,19 @@ def stitch_images(img1, img2, homography_matrix):
     h_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
 
     output_img = cv2.warpPerspective(img2, h_translation.dot(homography_matrix), (x_max - x_min, y_max - y_min))
-    #Blender.alpha_blend(img1, output_img, translation_dist)
-    output_img[translation_dist[1]:rows1 + translation_dist[1],
-    translation_dist[0]:cols1 + translation_dist[0]] = img1
-    return output_img
+
+    temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
+
+    Blender.alpha_blend(img1, output_img, translation_dist)
+
+    temp_image[translation_dist[1]:rows1 + translation_dist[1],
+               translation_dist[0]:cols1 + translation_dist[0]] = img1
+
+    width, height, _ = temp_image.shape
+
+    for x in range(width):
+        for y in range(height):
+            if not temp_image[x, y].all():
+                temp_image[x, y] = output_img[x, y]
+
+    return temp_image
