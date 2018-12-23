@@ -14,11 +14,11 @@ class Matcher:
 
     def __init__(self, detector_type, matches_required):
         if detector_type == KeyPointDetector.SIFT:
-            self.featureDetector = cv2.xfeatures2d.SIFT_create()
+            self.key_point_detector = cv2.xfeatures2d.SIFT_create()
         if detector_type == KeyPointDetector.SURF:
-            self.featureDetector = cv2.xfeatures2d.SURF_create()
+            self.key_point_detector = cv2.xfeatures2d.SURF_create()
 
-        self.matcher = cv2.DescriptorMatcher_create("BruteForce")
+        self.desc_matcher = cv2.DescriptorMatcher_create("BruteForce")
 
         self.matches_required = matches_required
 
@@ -28,7 +28,7 @@ class Matcher:
         :param image: input image
         """
         gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        key_points, descriptors = self.featureDetector.detectAndCompute(gray_scale_image, None)
+        key_points, descriptors = self.key_point_detector.detectAndCompute(gray_scale_image, None)
 
         key_points = np.float32([key_point.pt for key_point in key_points])
         return key_points, descriptors
@@ -45,7 +45,7 @@ class Matcher:
         :param threshold:
         :return: matches and homography if
         """
-        raw_matches = self.matcher.knnMatch(descriptors_a, descriptors_b, 2)
+        raw_matches = self.desc_matcher.knnMatch(descriptors_a, descriptors_b, 2)
         matches = []
 
         for m in raw_matches:

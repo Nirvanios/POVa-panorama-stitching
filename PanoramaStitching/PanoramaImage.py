@@ -1,3 +1,7 @@
+import threading
+
+from PanoramaStitching.Logger import logger_instance, LogLevel
+
 
 class PanoramaImage:
     checked = False
@@ -18,6 +22,17 @@ class PanoramaImage:
 class MainPanoramaImage(PanoramaImage):
     matches = []
 
+    def match(self, start, end, images, matcher):
+        for i in range(start, end):
+            if not images[i].checked:
+                m = matcher.match_key_points(images[i].key_points, self.key_points,
+                                             images[i].descriptors, self.descriptors, 0.7,
+                                             4.5)
+                if m is None:
+                    continue
+
+                self.matches.append((m, images[i]))
+
     def calculate_matches(self, images, matcher):
         """
         Calculate matches between panorama image and remaining unused images
@@ -27,9 +42,16 @@ class MainPanoramaImage(PanoramaImage):
         """
         self.matches.clear()
 
+        #logger_instance.log(LogLevel.DEBUG, "Starting thread for match calc")
+        #t1 = threading.Thread(target=self.match, args=(0, int(len(images) / 2), images, matcher))
+        #t1.start()
+        #self.match(int(len(images) / 2), len(images), images, matcher)
+        #t1.join()
+        #logger_instance.log(LogLevel.DEBUG, "Match calc done")
         for img in images:
             if not img.checked:
-                m = matcher.match_key_points(img.key_points, self.key_points, img.descriptors, self.descriptors, 0.7,
+                m = matcher.match_key_points(img.key_points, self.key_points,
+                                             img.descriptors, self.descriptors, 0.7,
                                              4.5)
                 if m is None:
                     continue

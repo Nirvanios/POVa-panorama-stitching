@@ -58,8 +58,6 @@ class Logger:
         if not self.print_debug and log_level == LogLevel.DEBUG:
             return
 
-        color = log_level.get_color()
-
         tab_form = "\t\t"
         if log_level == LogLevel.STATUS:
             tab_form = "\t"
@@ -68,9 +66,9 @@ class Logger:
             to_print = message
         else:
             if self.print_time:
-                to_print = color + "[" + log_level.name + ":" + tab_form + str(datetime.datetime.now()) + "]\t" + message + BColors.ENDC
+                to_print = log_level.get_color() + "[" + log_level.name + ":" + tab_form + str(datetime.datetime.now()) + "]\t" + message + BColors.ENDC
             else:
-                to_print = color + "[" + log_level.name + "]" + tab_form + message + BColors.ENDC
+                to_print = log_level.get_color() + "[" + log_level.name + "]" + tab_form + message + BColors.ENDC
 
         if log_level == LogLevel.ERROR:
             print(to_print, file=sys.stderr, flush=True)
@@ -78,4 +76,4 @@ class Logger:
             print(to_print, flush=True)
 
 
-logger_instance = Logger(print_debug=False, print_time=True)
+logger_instance = Logger(print_debug=True, print_time=False)
