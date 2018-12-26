@@ -196,8 +196,6 @@ if __name__ == "__main__":
     try:
         main(parser.parse_args())
     except Exception as e:
-        logger_instance.log(LogLevel.ERROR,
-                            "Error occured, exception type: " + e.__class__.__name__ + ", exception contents: " + str(
-                                e.args))
+        logger_instance.log(e)
     end_time = datetime.datetime.now()
     logger_instance.log(LogLevel.INFO, "Total execution time: " + str((end_time - start_time)))

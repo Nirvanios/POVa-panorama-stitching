@@ -1,6 +1,7 @@
 import sys
 from enum import Enum
 import datetime
+import traceback
 
 
 class LogLevel(Enum):
@@ -74,6 +75,20 @@ class Logger:
             print(to_print, file=sys.stderr, flush=True)
         else:
             print(to_print, flush=True)
+
+    def log(self, exception: Exception):
+        tab_form = "\t\t"
+        message = "Error occured, exception type: " + exception.__class__.__name__ + ", exception contents: " + str(
+                                exception.args)
+        if self.print_time:
+            to_print = LogLevel.ERROR.get_color() + "[" + LogLevel.ERROR.name + ":" + tab_form + str(
+                datetime.datetime.now()) + "]\t" + message + BColors.ENDC
+        else:
+            to_print = LogLevel.ERROR.get_color() + "[" + LogLevel.ERROR.name + "]" + tab_form + message + BColors.ENDC
+
+        print(to_print, file=sys.stderr, flush=True)
+
+        traceback.print_exc()
 
 
 logger_instance = Logger(print_debug=True, print_time=False)
