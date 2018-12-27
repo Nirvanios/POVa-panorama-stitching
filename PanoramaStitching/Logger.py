@@ -76,7 +76,7 @@ class Logger:
         else:
             print(to_print, flush=True)
 
-    def log(self, exception: Exception):
+    def log_exc(self, exception: Exception):
         tab_form = "\t\t"
         message = "Error occured, exception type: " + exception.__class__.__name__ + ", exception contents: " + str(
                                 exception.args)
