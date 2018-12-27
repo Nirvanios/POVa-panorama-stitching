@@ -34,3 +34,18 @@ def crop_black(image):
 
     crop = image[y:y + h, x:x + w]
     return crop
+
+
+def get_overlapping_mask(image_a, image_b):
+    """
+    Creates mask of overlaping region
+    :param image_a: firrst image
+    :param image_b: second image
+    :return: mask of overlaping region
+    """
+    gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
+    gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
+    mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]
+    mask_b = cv2.threshold(gray_b, 1, 255, cv2.THRESH_BINARY)[1]
+
+    return cv2.bitwise_and(mask_a, mask_b)

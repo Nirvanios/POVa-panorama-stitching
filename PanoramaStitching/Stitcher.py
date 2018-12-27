@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from PanoramaStitching import Blender
+from PanoramaStitching import SeamFinding
 
 
 def project_on_cylinder(img, center, focal):
@@ -58,17 +59,22 @@ def stitch_images(img1, img2, homography_matrix):
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
 
-    #Blender.alpha_blend(img1, output_img, translation_dist)
+    # Blender.alpha_blend(img1, output_img, translation_dist)
 
     temp_image[translation_dist[1]:rows1 + translation_dist[1],
     translation_dist[0]:cols1 + translation_dist[0]] = img1
 
     width, height, _ = temp_image.shape
 
+    SeamFinding.graph_cut_blend(temp_image, output_img)
+
     for x in range(width):
         for y in range(height):
             maxpix = temp_image[x, y].max()
             if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
                 temp_image[x, y] = output_img[x, y]
+
+    # temp_image = Blender.alpha_blend(img1, output_img, translation_dist)
+
 
     return temp_image

@@ -15,6 +15,7 @@ def alpha_blend(image_a, image_b, translation_dist):
     black_a = np.zeros(image_b.shape, dtype=np.uint8)
     black_a[translation_dist[1]:rows + translation_dist[1],
     translation_dist[0]:cols + translation_dist[0]] = image_a
+    black_b = image_b
     gray_a = cv2.cvtColor(black_a, cv2.COLOR_BGR2GRAY)
     gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
     mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]
@@ -30,8 +31,10 @@ def alpha_blend(image_a, image_b, translation_dist):
     value = 0
     interpolation = np.zeros(image_b.shape, dtype=np.uint8)
     result = np.zeros(image_b.shape, dtype=np.uint8)
+    if translation_dist[1] > 0:
+        black_a, black_b = black_b, black_a
     for x in range(0, interpolation.shape[1]):
-        result[:, x, :] = np.clip((value * black_a[:, x, :]) + ((1.0 - value) * image_b[:, x, :]), 0, 255)
+        result[:, x, :] = np.clip((value * black_a[:, x, :]) + ((1.0 - value) * black_b[:, x, :]), 0, 255)
         if (x > ext_left) and (x < ext_right):
             value += step
 
