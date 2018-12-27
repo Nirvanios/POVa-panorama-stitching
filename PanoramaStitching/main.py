@@ -156,7 +156,7 @@ def panorama_affine(args, main_image, images):
 def main(args):
     logger_instance.set_debug(args.debug)
     images = PanoUtils.load_images(args.folder)
-    logger_instance.log(LogLevel.STATUS, "Images in folder:")
+    logger_instance.log(LogLevel.INFO, "Images in folder:")
     for img in images:
         logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 

@@ -18,8 +18,8 @@ class Matcher:
         if detector_type == KeyPointDetector.SURF:
             self.key_point_detector = cv2.xfeatures2d.SURF_create()
 
-        FLANN_INDEX_KDTREE = 0
-        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+        # setup FLANN detector
+        index_params = dict(algorithm=0, trees=5)
         search_params = dict(checks=50)
         self.desc_matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
@@ -40,13 +40,14 @@ class Matcher:
                          ratio, threshold, method="homography"):
         """
         match key points given by SIFT/SURF
+        :param method: homography/affine
         :param key_points_a: key points of first image
         :param key_points_b: key points of second image
         :param descriptors_a: descriptors of first image
         :param descriptors_b: descriptors of second image
         :param ratio:
         :param threshold:
-        :return: matches and homography if
+        :return: matches and homography/affine matrix
         """
         raw_matches = self.desc_matcher.knnMatch(descriptors_a, descriptors_b, 2)
         matches = []
@@ -96,11 +97,3 @@ class Matcher:
 
         cv2.imshow('matches', result)
         cv2.waitKey()
-
-    @staticmethod
-    def get_transform(key_points_a, key_points_b):
-        src_pts = np.float32(key_points_a).reshape(-1, 1, 2)
-        dst_pts = np.float32(key_points_b).reshape(-1, 1, 2)
-
-        M, mask = cv2.estimateAffine2D(src_pts, dst_pts, cv2.RANSAC, ransacReprojThreshold=5.0)
-        return M, mask
