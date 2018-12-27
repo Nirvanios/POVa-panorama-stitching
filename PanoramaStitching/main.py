@@ -1,21 +1,17 @@
 import argparse
 import datetime
-import linecache
 import os
-import tracemalloc
 
 import cv2
 import numpy as np
 
+import PanoramaStitching.Stitcher as Stitcher
 import PanoramaStitching.Utils as PanoUtils
+from PanoramaStitching.Logger import LogLevel
+from PanoramaStitching.Logger import logger_instance
 from PanoramaStitching.Matcher import KeyPointDetector
 from PanoramaStitching.Matcher import Matcher
 from PanoramaStitching.PanoramaImage import MainPanoramaImage
-import PanoramaStitching.Stitcher as Stitcher
-from PanoramaStitching.Logger import logger_instance
-from PanoramaStitching.Logger import LogLevel
-
-show_mem = False
 
 parser = argparse.ArgumentParser(description='Panorama stitching.')
 parser.add_argument('--folder',
@@ -46,34 +42,19 @@ parser.add_argument('--debug', default=False,
                     help='Allow debug prints')
 
 
-def display_top(snapshot, key_type='lineno', limit=3):
-    snapshot = snapshot.filter_traces((
-        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-        tracemalloc.Filter(False, "<unknown>"),
-    ))
-    top_stats = snapshot.statistics(key_type)
+def print_image_info(images):
+    logger_instance.log(LogLevel.INFO, "List of images used in panorama:")
+    for img in images:
+        if img.checked:
+            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 
-    print("Top %s lines" % limit)
-    for index, stat in enumerate(top_stats[:limit], 1):
-        frame = stat.traceback[0]
-        # replace "/path/to/module/file.py" with "module/file.py"
-        filename = os.sep.join(frame.filename.split(os.sep)[-2:])
-        print("#%s: %s:%s: %.1f KiB"
-              % (index, filename, frame.lineno, stat.size / 1024))
-        line = linecache.getline(frame.filename, frame.lineno).strip()
-        if line:
-            print('    %s' % line)
-
-    other = top_stats[limit:]
-    if other:
-        size = sum(stat.size for stat in other)
-        print("%s other: %.1f KiB" % (len(other), size / 1024))
-    total = sum(stat.size for stat in top_stats)
-    print("Total allocated size: %.1f KiB" % (total / 1024))
+    logger_instance.log(LogLevel.INFO, "List of images NOT used in panorama:")
+    for img in images:
+        if not img.checked:
+            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 
 
 def panorama(args, main_image, images):
-    logger_instance.log(LogLevel.STATUS, "Usign homography")
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
     for img in images:
         img.calculate_descriptors(matcher)
@@ -110,26 +91,13 @@ def panorama(args, main_image, images):
             cnt += 1
             logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
 
-    w, h, _ = panorama_image.image.shape
-
-    cv2.imshow('pano', panorama_image.image)
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
     cv2.imwrite(args.dest, panorama_image.image)
-    cv2.waitKey()
 
-    logger_instance.log(LogLevel.INFO, "List of images used in panorama:")
-    for img in images:
-        if img.checked:
-            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
-
-    logger_instance.log(LogLevel.INFO, "List of images NOT used in panorama:")
-    for img in images:
-        if not img.checked:
-            logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
+    print_image_info(images)
 
 
 def panorama_affine(args, main_image, images):
-    logger_instance.log(LogLevel.STATUS, "Using affine")
     f = 750
 
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
@@ -162,7 +130,6 @@ def panorama_affine(args, main_image, images):
             panorama_image.image = Stitcher.stitch_images_affine(panorama_image.image,
                                                                  panorama_image.matches[index][1].image,
                                                                  h)
-            # panorama_image.image = PanoUtils.crop_black(panorama_image.image)
             logger_instance.log(LogLevel.INFO, "Stitching with: " + panorama_image.matches[index][1].name)
             panorama_image.matches[index][1].checked = True
             added = True
@@ -171,6 +138,11 @@ def panorama_affine(args, main_image, images):
             cv2.imwrite(save_location, panorama_image.image)
             cnt += 1
             logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
+
+    panorama_image.image = PanoUtils.crop_black(panorama_image.image)
+    logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
+    cv2.imwrite(args.dest, panorama_image.image)
+    print_image_info(images)
 
 
 def main(args):
@@ -196,11 +168,13 @@ def main(args):
 
     global matcher
     if args.kp_detector == 'SIFT':
-        logger_instance.log(LogLevel.STATUS, "Usign SIFT")
+        logger_instance.log(LogLevel.STATUS, "Using SIFT")
         matcher = Matcher(KeyPointDetector.SIFT, 4)
     elif args.kp_detector == 'SURF':
-        logger_instance.log(LogLevel.STATUS, "Usign SURF")
+        logger_instance.log(LogLevel.STATUS, "Using SURF")
         matcher = Matcher(KeyPointDetector.SURF, 4)
+
+    logger_instance.log(LogLevel.STATUS, "Using " + args.pano_type)
 
     if args.pano_type == 'HOMOGRAPHY':
         panorama(args, main_image, images)
@@ -209,10 +183,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-    if show_mem:
-        tracemalloc.start()
-
-
     start_time = datetime.datetime.now()
     try:
         main(parser.parse_args())
