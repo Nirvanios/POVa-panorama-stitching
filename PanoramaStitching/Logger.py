@@ -77,6 +77,10 @@ class Logger:
             print(to_print, flush=True)
 
     def log_exc(self, exception: Exception):
+        """
+        Log exception and its traceback.
+        :param exception: exception to log
+        """
         tab_form = "\t\t"
         message = "Error occured, exception type: " + exception.__class__.__name__ + ", exception contents: " + str(
                                 exception.args)
@@ -91,6 +95,10 @@ class Logger:
         traceback.print_exc()
 
     def set_debug(self, value):
+        """
+        Enable/disable messages marked "DEBUG"
+        :param value: bool
+        """
         self.print_debug = value
 
 
