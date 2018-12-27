@@ -33,7 +33,7 @@ class MainPanoramaImage(PanoramaImage):
 
                 self.matches.append((m, images[i]))
 
-    def calculate_matches(self, images, matcher):
+    def calculate_matches(self, images, matcher, method="homography"):
         """
         Calculate matches between panorama image and remaining unused images
         :param images: list of images
@@ -42,17 +42,11 @@ class MainPanoramaImage(PanoramaImage):
         """
         self.matches.clear()
 
-        #logger_instance.log(LogLevel.DEBUG, "Starting thread for match calc")
-        #t1 = threading.Thread(target=self.match, args=(0, int(len(images) / 2), images, matcher))
-        #t1.start()
-        #self.match(int(len(images) / 2), len(images), images, matcher)
-        #t1.join()
-        #logger_instance.log(LogLevel.DEBUG, "Match calc done")
         for img in images:
             if not img.checked:
                 m = matcher.match_key_points(img.key_points, self.key_points,
                                              img.descriptors, self.descriptors, 0.7,
-                                             4.5)
+                                             4.5, method)
                 if m is None:
                     continue
 

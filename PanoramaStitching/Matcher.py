@@ -37,7 +37,7 @@ class Matcher:
         return key_points, descriptors
 
     def match_key_points(self, key_points_a, key_points_b, descriptors_a, descriptors_b,
-                         ratio, threshold):
+                         ratio, threshold, method="homography"):
         """
         match key points given by SIFT/SURF
         :param key_points_a: key points of first image
@@ -60,8 +60,12 @@ class Matcher:
             points_a = np.float32([key_points_a[i] for (_, i) in matches])
             points_b = np.float32([key_points_b[i] for (i, _) in matches])
 
-            (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
-                                             threshold)
+            if method == "homography":
+                (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
+                                                 threshold)
+            elif method == "affine":
+                (H, status) = cv2.estimateAffine2D(points_a, points_b, cv2.RANSAC,
+                                                   ransacReprojThreshold=threshold)
 
             return matches, H, status
 
@@ -92,3 +96,11 @@ class Matcher:
 
         cv2.imshow('matches', result)
         cv2.waitKey()
+
+    @staticmethod
+    def get_transform(key_points_a, key_points_b):
+        src_pts = np.float32(key_points_a).reshape(-1, 1, 2)
+        dst_pts = np.float32(key_points_b).reshape(-1, 1, 2)
+
+        M, mask = cv2.estimateAffine2D(src_pts, dst_pts, cv2.RANSAC, ransacReprojThreshold=5.0)
+        return M, mask
