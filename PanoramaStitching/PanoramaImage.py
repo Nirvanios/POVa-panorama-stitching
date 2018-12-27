@@ -1,3 +1,7 @@
+import threading
+
+from PanoramaStitching.Logger import logger_instance, LogLevel
+
 
 class PanoramaImage:
     checked = False
@@ -18,9 +22,27 @@ class PanoramaImage:
 class MainPanoramaImage(PanoramaImage):
     matches = []
 
-    def calculate_matches(self, images, matcher):
+    def match(self, start, end, images, matcher):
+        """
+        Match key_points of main panorama image and other images
+        :param start: start index in images list
+        :param end: end index in images list
+        :param images: list of PanoramaImage
+        """
+        for i in range(start, end):
+            if not images[i].checked:
+                m = matcher.match_key_points(images[i].key_points, self.key_points,
+                                             images[i].descriptors, self.descriptors, 0.7,
+                                             4.5)
+                if m is None:
+                    continue
+
+                self.matches.append((m, images[i]))
+
+    def calculate_matches(self, images, matcher, method="homography"):
         """
         Calculate matches between panorama image and remaining unused images
+        :param method: homography/affine
         :param images: list of images
         :param matcher: key point matcher
         :return:
@@ -29,8 +51,9 @@ class MainPanoramaImage(PanoramaImage):
 
         for img in images:
             if not img.checked:
-                m = matcher.match_key_points(img.key_points, self.key_points, img.descriptors, self.descriptors, 0.7,
-                                             4.5)
+                m = matcher.match_key_points(img.key_points, self.key_points,
+                                             img.descriptors, self.descriptors, 0.7,
+                                             4.5, method)
                 if m is None:
                     continue
 
@@ -38,7 +61,7 @@ class MainPanoramaImage(PanoramaImage):
 
     def find_best_match(self):
         """
-        Find best match for stitching
+        Find best match for stitching.
         :return: amount of matches and index of the image
         """
         max_matches = 0

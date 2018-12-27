@@ -14,11 +14,14 @@ class Matcher:
 
     def __init__(self, detector_type, matches_required):
         if detector_type == KeyPointDetector.SIFT:
-            self.featureDetector = cv2.xfeatures2d.SIFT_create()
+            self.key_point_detector = cv2.xfeatures2d.SIFT_create()
         if detector_type == KeyPointDetector.SURF:
-            self.featureDetector = cv2.xfeatures2d.SURF_create()
+            self.key_point_detector = cv2.xfeatures2d.SURF_create()
 
-        self.matcher = cv2.DescriptorMatcher_create("BruteForce")
+        # setup FLANN detector
+        index_params = dict(algorithm=0, trees=5)
+        search_params = dict(checks=50)
+        self.desc_matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         self.matches_required = matches_required
 
@@ -28,24 +31,25 @@ class Matcher:
         :param image: input image
         """
         gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        key_points, descriptors = self.featureDetector.detectAndCompute(gray_scale_image, None)
+        key_points, descriptors = self.key_point_detector.detectAndCompute(gray_scale_image, None)
 
         key_points = np.float32([key_point.pt for key_point in key_points])
         return key_points, descriptors
 
     def match_key_points(self, key_points_a, key_points_b, descriptors_a, descriptors_b,
-                         ratio, threshold):
+                         ratio, threshold, method="homography"):
         """
         match key points given by SIFT/SURF
+        :param method: homography/affine
         :param key_points_a: key points of first image
         :param key_points_b: key points of second image
         :param descriptors_a: descriptors of first image
         :param descriptors_b: descriptors of second image
         :param ratio:
         :param threshold:
-        :return: matches and homography if
+        :return: matches and homography/affine matrix
         """
-        raw_matches = self.matcher.knnMatch(descriptors_a, descriptors_b, 2)
+        raw_matches = self.desc_matcher.knnMatch(descriptors_a, descriptors_b, 2)
         matches = []
 
         for m in raw_matches:
@@ -57,8 +61,12 @@ class Matcher:
             points_a = np.float32([key_points_a[i] for (_, i) in matches])
             points_b = np.float32([key_points_b[i] for (i, _) in matches])
 
-            (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
-                                             threshold)
+            if method == "homography":
+                (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
+                                                 threshold)
+            elif method == "affine":
+                (H, status) = cv2.estimateAffine2D(points_a, points_b, cv2.RANSAC,
+                                                   ransacReprojThreshold=threshold)
 
             return matches, H, status
 
