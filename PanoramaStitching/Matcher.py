@@ -18,7 +18,10 @@ class Matcher:
         if detector_type == KeyPointDetector.SURF:
             self.key_point_detector = cv2.xfeatures2d.SURF_create()
 
-        self.desc_matcher = cv2.DescriptorMatcher_create("BruteForce")
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+        search_params = dict(checks=50)
+        self.desc_matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         self.matches_required = matches_required
 
