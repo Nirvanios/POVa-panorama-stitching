@@ -42,6 +42,10 @@ parser.add_argument('--debug', default=False,
 
 
 def print_image_info(images):
+    """
+    Print info about images used in a panorama
+    :param images: list of PanoramaImage
+    """
     logger_instance.log(LogLevel.INFO, "List of images used in panorama:")
     for img in images:
         if img.checked:
@@ -54,6 +58,13 @@ def print_image_info(images):
 
 
 def panorama_loop(args, images, panorama_image):
+    """
+    Main loop of the panorama stitching. Finds the most viable image and stitches it to the panorama.
+    Ends when conditions for stitching aren't met.
+    :param args: program arguments
+    :param images: list of PanoramaImage
+    :param panorama_image: main panorama image
+    """
     added = True
     cnt = 0
     logger_instance.log(LogLevel.STATUS, "Starting main panorama loop")
@@ -93,6 +104,12 @@ def panorama_loop(args, images, panorama_image):
 
 
 def panorama(args, main_image, images):
+    """
+    Homography panorama.
+    :param args: program arguments
+    :param main_image: main panorama image
+    :param images: list of PanoramaImage
+    """
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
     for img in images:
         img.calculate_descriptors(matcher)
@@ -109,6 +126,12 @@ def panorama(args, main_image, images):
 
 
 def panorama_affine(args, main_image, images):
+    """
+    Affine panorama.
+    :param args: program arguments
+    :param main_image: main panorama image
+    :param images: list of PanoramaImage
+    """
     f = 750
 
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
@@ -148,7 +171,7 @@ def main(args):
         return
 
     main_image = x
-    logger_instance.log(LogLevel.STATUS, "Main image:")
+    logger_instance.log(LogLevel.INFO, "Main image:")
     logger_instance.log(LogLevel.NONE, "\t\t" + main_image.name)
 
     global matcher
