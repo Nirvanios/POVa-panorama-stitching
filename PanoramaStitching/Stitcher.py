@@ -7,13 +7,17 @@ from PanoramaStitching import Blender
 from PanoramaStitching.Logger import logger_instance, LogLevel
 
 
-def cylindricalWarpImage(img1, K):
+def wrap_image_on_cylinder(img1, K):
+    """
+    Wraps image on a cylinder defined by matrix K (http://ksimek.github.io/2013/08/13/intrinsic/).
+    :param img1: image to wrap
+    :param K: intrinsic matrix
+    :return: transformed image
+    """
     f = K[0, 0]
 
     im_h, im_w = img1.shape[:2]
 
-    # go inverse from cylindrical coord to the image
-    # (this way there are no gaps)
     cyl = np.zeros_like(img1)
     cyl_mask = np.zeros_like(img1)
     cyl_h, cyl_w = cyl.shape[:2]
@@ -37,36 +41,18 @@ def cylindricalWarpImage(img1, K):
             cyl[int(y_cyl), int(x_cyl)] = img1[int(y_im), int(x_im)]
             cyl_mask[int(y_cyl), int(x_cyl)] = 255
 
-    return (cyl, cyl_mask)
-
-
-def project_on_cylinder(img, center, focal):
-    """
-    Performs a cylindrical projection of a planar image.
-    """
-
-    if not focal:
-        focal = 750
-
-    # define mapping functions
-    scale = focal
-    mapX = lambda y, x: focal * np.tan(x / scale)
-    mapY = lambda y, x: focal / np.cos(x / scale) * y / scale
-
-    def make_map(y, x):
-        map_x = mapX(y - center[1], x - center[0]) + center[0]
-        map_y = mapY(y - center[1], x - center[0]) + center[1]
-        return np.dstack((map_x, map_y)).astype(np.int16)
-
-    # create the LUTs for x and y coordinates
-    map_xy = np.fromfunction(make_map, img.shape[:2], dtype=np.int16)
-    img_mapped = cv2.remap(img, map_xy, None, cv2.INTER_NEAREST)
-
-    return img_mapped
+    return cyl, cyl_mask
 
 
 def stitch_images_affine(img1, img2, M):
-    out1 = cv2.warpAffine(img2, M, (img1.shape[1 ], img1.shape[0]))
+    """
+    Stitch images using affine warp.
+    :param img1: panorama image
+    :param img2: image to stitch
+    :param M: affine matrix
+    :return: stitched image
+    """
+    out1 = cv2.warpAffine(img2, M, (img1.shape[1], img1.shape[0]))
 
     output = np.zeros(img1.shape)
 
@@ -94,8 +80,6 @@ def stitch_images_homography(img1, img2, homography_matrix):
     """
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
-
-    # img2 = project_on_cylinder(img2, (rows2 / 2, cols2 / 2), 500)
 
     list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
     temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)

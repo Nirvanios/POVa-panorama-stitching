@@ -138,7 +138,7 @@ def panorama_affine(args, main_image, images):
     for img in images:
         h, w = img.image.shape[:2]
         K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
-        img.image = Stitcher.cylindricalWarpImage(img.image, K)[0]
+        img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
         img.image = cv2.copyMakeBorder(img.image, 500, 500, 500, 500, cv2.BORDER_CONSTANT)
         img.calculate_descriptors(matcher)
 
