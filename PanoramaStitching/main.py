@@ -24,7 +24,6 @@ parser.add_argument('--dest',
                     required=True,
                     help='destination of output image')
 parser.add_argument('--out',
-                    required=True,
                     help='destination of debug output')
 
 parser.add_argument('--kp_detector',
@@ -54,14 +53,7 @@ def print_image_info(images):
             logger_instance.log(LogLevel.NONE, "\t\t" + img.name)
 
 
-def panorama(args, main_image, images):
-    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
-    for img in images:
-        img.calculate_descriptors(matcher)
-
-    panorama_image = MainPanoramaImage(main_image.name, main_image.image)
-    main_image.checked = True
-
+def panorama_loop(args, images, panorama_image):
     added = True
     cnt = 0
     logger_instance.log(LogLevel.STATUS, "Starting main panorama loop")
@@ -70,26 +62,45 @@ def panorama(args, main_image, images):
 
         panorama_image.calculate_descriptors(matcher)
 
-        panorama_image.calculate_matches(images, matcher)
+        panorama_image.calculate_matches(images, matcher, args.pano_type.lower())
 
         match_count, index = panorama_image.find_best_match()
 
         logger_instance.log(LogLevel.DEBUG, "Index: " + str(index) + " Cnt: " + str(match_count))
 
         if not index == -1:
+            logger_instance.log(LogLevel.INFO, "Stitching with: " + panorama_image.matches[index][1].name)
+
             matches, h, status = panorama_image.matches[index][0]
-            panorama_image.image = Stitcher.stitch_images_homography(panorama_image.image,
+            if args.pano_type == "HOMOGRAPHY":
+                panorama_image.image = Stitcher.stitch_images_homography(panorama_image.image,
+                                                                         panorama_image.matches[index][1].image,
+                                                                         h)
+                panorama_image.image = PanoUtils.crop_black(panorama_image.image)
+            elif args.pano_type == "AFFINE":
+                panorama_image.image = Stitcher.stitch_images_affine(panorama_image.image,
                                                                      panorama_image.matches[index][1].image,
                                                                      h)
-            panorama_image.image = PanoUtils.crop_black(panorama_image.image)
-            logger_instance.log(LogLevel.INFO, "Stitching with: " + panorama_image.matches[index][1].name)
+
             panorama_image.matches[index][1].checked = True
             added = True
-            save_location = args.out + str(cnt) + ".png"
-            logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
-            cv2.imwrite(save_location, panorama_image.image)
+            if args.debug:
+                save_location = args.out + str(cnt) + ".png"
+                logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
+                cv2.imwrite(save_location, panorama_image.image)
             cnt += 1
             logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
+
+
+def panorama(args, main_image, images):
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
+    for img in images:
+        img.calculate_descriptors(matcher)
+
+    panorama_image = MainPanoramaImage(main_image.name, main_image.image)
+    main_image.checked = True
+
+    panorama_loop(args, images, panorama_image)
 
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
     cv2.imwrite(args.dest, panorama_image.image)
@@ -111,33 +122,7 @@ def panorama_affine(args, main_image, images):
     panorama_image = MainPanoramaImage(main_image.name, main_image.image)
     main_image.checked = True
 
-    added = True
-    cnt = 0
-    logger_instance.log(LogLevel.STATUS, "Starting main panorama loop")
-    while added:
-        added = False
-
-        panorama_image.calculate_descriptors(matcher)
-
-        panorama_image.calculate_matches(images, matcher, "affine")
-
-        match_count, index = panorama_image.find_best_match()
-
-        logger_instance.log(LogLevel.DEBUG, "Index: " + str(index) + " Cnt: " + str(match_count))
-
-        if not index == -1:
-            matches, h, status = panorama_image.matches[index][0]
-            panorama_image.image = Stitcher.stitch_images_affine(panorama_image.image,
-                                                                 panorama_image.matches[index][1].image,
-                                                                 h)
-            logger_instance.log(LogLevel.INFO, "Stitching with: " + panorama_image.matches[index][1].name)
-            panorama_image.matches[index][1].checked = True
-            added = True
-            save_location = args.out + str(cnt) + ".png"
-            logger_instance.log(LogLevel.DEBUG, "saving intermediate result to: " + save_location)
-            cv2.imwrite(save_location, panorama_image.image)
-            cnt += 1
-            logger_instance.log(LogLevel.STATUS, "Matched " + str(cnt + 1) + "/" + str(len(images)) + " images")
+    panorama_loop(args, images, panorama_image)
 
     panorama_image.image = PanoUtils.crop_black(panorama_image.image)
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
