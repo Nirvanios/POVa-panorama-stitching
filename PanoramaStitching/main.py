@@ -18,12 +18,32 @@ from PanoramaStitching.Logger import LogLevel
 show_mem = False
 
 parser = argparse.ArgumentParser(description='Panorama stitching.')
-parser.add_argument('--folder', help='path to file with images')
-parser.add_argument('--img', help='path to main image')
-parser.add_argument('--dest', help='destination of output image')
-parser.add_argument('--out', help='destination of debug output')
-parser.add_argument('--sift', default=True, help='Use SIFT for key point detection')
-parser.add_argument('--surf', default=False, help='Use SURF for key point detection')
+parser.add_argument('--folder',
+                    required=True,
+                    help='path to file with images')
+parser.add_argument('--img',
+                    required=True,
+                    help='path to main image')
+parser.add_argument('--dest',
+                    required=True,
+                    help='destination of output image')
+parser.add_argument('--out',
+                    required=True,
+                    help='destination of debug output')
+
+parser.add_argument('--kp_detector',
+                    default='SIFT',
+                    choices=['SIFT', 'SURF'],
+                    help='key point detector SIFT or SURF')
+
+parser.add_argument('--pano_type',
+                    default='HOMOGRAPHY',
+                    choices=['HOMOGRAPHY', 'AFFINE'],
+                    help='type of panorama HOMOGRAPHY or AFFINE')
+
+parser.add_argument('--debug', default=False,
+                    action='store_true',
+                    help='Allow debug prints')
 
 
 def display_top(snapshot, key_type='lineno', limit=3):
@@ -50,6 +70,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
         print("%s other: %.1f KiB" % (len(other), size / 1024))
     total = sum(stat.size for stat in top_stats)
     print("Total allocated size: %.1f KiB" % (total / 1024))
+
 
 def panorama(args, main_image, images):
     logger_instance.log(LogLevel.STATUS, "Usign homography")
@@ -109,7 +130,7 @@ def panorama(args, main_image, images):
 
 def panorama_affine(args, main_image, images):
     logger_instance.log(LogLevel.STATUS, "Using affine")
-    f = 400
+    f = 750
 
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
     for img in images:
@@ -153,6 +174,7 @@ def panorama_affine(args, main_image, images):
 
 
 def main(args):
+    logger_instance.set_debug(args.debug)
     images = PanoUtils.load_images(args.folder)
     logger_instance.log(LogLevel.STATUS, "Images in folder:")
     for img in images:
@@ -173,19 +195,23 @@ def main(args):
     logger_instance.log(LogLevel.NONE, "\t\t" + main_image.name)
 
     global matcher
-    if args.sift:
+    if args.kp_detector == 'SIFT':
         logger_instance.log(LogLevel.STATUS, "Usign SIFT")
         matcher = Matcher(KeyPointDetector.SIFT, 4)
-    if args.surf:
+    elif args.kp_detector == 'SURF':
         logger_instance.log(LogLevel.STATUS, "Usign SURF")
         matcher = Matcher(KeyPointDetector.SURF, 4)
 
-    panorama(args, main_image, images)
+    if args.pano_type == 'HOMOGRAPHY':
+        panorama(args, main_image, images)
+    elif args.pano_type == 'AFFINE':
+        panorama_affine(args, main_image, images)
 
 
 if __name__ == "__main__":
     if show_mem:
         tracemalloc.start()
+
 
     start_time = datetime.datetime.now()
     try:

@@ -90,5 +90,8 @@ class Logger:
 
         traceback.print_exc()
 
+    def set_debug(self, value):
+        self.print_debug = value
 
-logger_instance = Logger(print_debug=True, print_time=False)
+
+logger_instance = Logger(print_debug=False, print_time=False)
