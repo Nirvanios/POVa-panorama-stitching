@@ -7,8 +7,9 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
     Blends two images together
     :param image_a: first image (panorama)
     :param image_b: second image
-    :param translation_dist:
-    :return: blended image
+    :param image_a_midpoint: midpoint of image_a
+    :param image_b_midpoint: midpoint of image_b
+    :return: two images blended into panorama
     """
     rows, cols = image_a.shape[:2]
 
@@ -18,34 +19,49 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
     mask_b = cv2.threshold(gray_b, 1, 255, cv2.THRESH_BINARY)[1]
 
     mask = cv2.bitwise_and(mask_a, mask_b)
-    cv2.imshow('mask', mask)
 
     contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
-    ext_left = tuple(contours[0][contours[0][:, :, 0].argmin()][0])[0]
-    ext_right = tuple(contours[0][contours[0][:, :, 0].argmax()][0])[0]
-    ext_top = tuple(contours[0][contours[0][:, :, 1].argmin()][0])[1]
-    ext_bot = tuple(contours[0][contours[0][:, :, 1].argmax()][0])[1]
+    ext_left = cols
+    ext_right = 0
+    ext_top = rows
+    ext_bot = 0
+    for item in contours:
+        left = tuple(item[item[:, :, 0].argmin()][0])[0]
+        right = tuple(item[item[:, :, 0].argmax()][0])[0]
+        top = tuple(item[item[:, :, 1].argmin()][0])[1]
+        bot = tuple(item[item[:, :, 1].argmax()][0])[1]
 
+        if left < ext_left:
+            ext_left = left
+        if right > ext_right:
+            ext_right = right
+        if top < ext_top:
+            ext_top = top
+        if bot > ext_bot:
+            ext_bot = bot
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
     mask = cv2.erode(mask, kernel, iterations=1)
 
     step = 0.0
     value = 0
-    interpolation = np.zeros(image_b.shape, dtype=np.uint8)
+
     result = np.zeros(image_b.shape, dtype=np.uint8)
     diff = image_b_midpoint[0] - image_a_midpoint[0]
     left_right = False
     top_bot = False
     if abs(diff[0]) < abs(diff[1]):
-            top_bot = True
-            step = 1.0 / (ext_bot - ext_top)
+        top_bot = True
+        step = 1.0 / abs(ext_bot - ext_top)
     else:
         left_right = True
-        step = 1.0 / (ext_right - ext_left)
-    if (image_a_midpoint[0, 0] > image_b_midpoint[0, 0]) or (image_a_midpoint[0, 1] > image_b_midpoint[0, 1]):
+        step = 1.0 / abs(ext_right - ext_left)
+
+    if ((image_a_midpoint[0, 0] > image_b_midpoint[0, 0]) and left_right) \
+            or ((image_a_midpoint[0, 1] > image_b_midpoint[0, 1]) and top_bot):
         image_b, image_a = image_a, image_b
-    for x in range(0, interpolation.shape[1]):
+
+    for x in range(0, image_b.shape[1]):
         for y in range(rows):
             if np.all(abs(image_a[y, x] - image_b[y, x]) > 200) and np.all(image_b[y, x] != (0, 0, 0)):
                 result[y, x] = image_b[y, x]
@@ -62,9 +78,5 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
             value += step
         if top_bot:
             value = 0
-
-    cv2.imshow('alpha', result)
-    cv2.imwrite('alpha.jpg', result)
-    cv2.waitKey()
 
     return result

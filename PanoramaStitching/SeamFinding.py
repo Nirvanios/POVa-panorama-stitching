@@ -9,11 +9,24 @@ from PanoramaStitching import Utils
 
 
 def get_inverted_difference_image(image_a, image_b):
+    """
+    Creates and returns inverted difference of two images
+    :param image_a: First image
+    :param image_b: Second image
+    :return: inverted difference of images
+    """
     diff = image_a - image_b
     return 255 - diff
 
 
 def get_3x3_neighbour_elements(matrix, x, y):
+    """
+    Returns 3x3 matrix around given coordinates
+    :param matrix: Matrix in which to search
+    :param x: X coordination
+    :param y: Y coordination
+    :return: 3x3 neighbour matrix
+    """
     width, height = matrix.shape[:2]
     neighbour = np.ones((3, 3), dtype=int)
     neighbour = np.negative(neighbour)
@@ -25,6 +38,13 @@ def get_3x3_neighbour_elements(matrix, x, y):
 
 
 def get_4neighbour_elements(matrix, x, y):
+    """
+    Returns 4 elements (cross) around given coordinates
+    :param matrix: Matrix in which to search
+    :param x: X coordination
+    :param y: Y coordination
+    :return: 4 elements (cross) around given coordinates
+    """
     width, height = matrix.shape[:2]
     neighbours = np.ones(4)
     neighbours = np.negative(neighbours)
@@ -40,6 +60,14 @@ def get_4neighbour_elements(matrix, x, y):
 
 
 def get_watershed_image(image, mask):
+    """
+    Creates and returns segmented image.
+    In returned image left segment has value -5 and right segment -10.
+    Those two segments represents source and sink in graph.
+    :param image: inverted difference of two images
+    :param mask: mask of overlapping region
+    :return: Segmented image
+    """
     height, width = mask.shape
     original_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     original_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
@@ -168,13 +196,20 @@ def get_watershed_image(image, mask):
     original_mask[watershed_image == -6] = [255, 0, 255]
     original_mask[watershed_image == -1] = [0, 0, 255]
 
-    cv2.imshow('water', original_mask)
+    # cv2.imshow('water', original_mask)
     # cv2.waitKey()
 
     return watershed_image
 
 
 def find_cut_seam(segmented_image, inverted_image, mask):
+    """
+    Creates graph and perform minimal cut on it.
+    :param segmented_image: segmented image from get_watershed_image function
+    :param inverted_image: inverted difference of two images
+    :param mask: mask of overlapping region
+    :return: List of node pairs where is minimal cut found
+    """
     original_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
     height, width = segmented_image.shape
     Edge = namedtuple("Edge", ["node_1", "node_2"])
@@ -225,6 +260,12 @@ def find_cut_seam(segmented_image, inverted_image, mask):
 
 
 def graph_cut_blend(image_a, image_b):
+    """
+    Blends two images using watershed and graph cut.
+    :param image_a: First image
+    :param image_b: Second image
+    :return: Panorama blended using graph cut
+    """
     height, width = image_a.shape[:2]
     gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
     gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
@@ -286,8 +327,9 @@ def graph_cut_blend(image_a, image_b):
         if not copy_black:
                 new_image_a[x, y] = image_b[x, y]
 
-
+    """
     cv2.imshow('new_im', new_image_a)
     cv2.waitKey()
+    """
 
     return new_image_a
