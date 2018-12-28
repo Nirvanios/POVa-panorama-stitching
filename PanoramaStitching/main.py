@@ -4,6 +4,9 @@ import linecache
 import os
 import tracemalloc
 
+import sys
+sys.path.append("./")
+
 import cv2
 
 import PanoramaStitching.Utils as PanoUtils
@@ -173,12 +176,16 @@ def main(args):
     logger_instance.log(LogLevel.STATUS, "Main image:")
     logger_instance.log(LogLevel.NONE, "\t\t" + main_image.name)
 
+    logger_instance.log(LogLevel.STATUS, "Color balancing...")
+    images = PanoUtils.balance_color(images, main_image.image)
+    logger_instance.log(LogLevel.STATUS, "Done.")
+
     global matcher
     if args.sift:
-        logger_instance.log(LogLevel.STATUS, "Usign SIFT")
+        logger_instance.log(LogLevel.STATUS, "Using SIFT")
         matcher = Matcher(KeyPointDetector.SIFT, 4)
     if args.surf:
-        logger_instance.log(LogLevel.STATUS, "Usign SURF")
+        logger_instance.log(LogLevel.STATUS, "Using SURF")
         matcher = Matcher(KeyPointDetector.SURF, 4)
 
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
