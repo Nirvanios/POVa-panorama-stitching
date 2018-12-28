@@ -66,13 +66,15 @@ def balance_color(images, main_image):
         # Iterate
         for i in range(w):
             for j in range(h):
-                # Set pixel intentisity
+                # Set pixel intensity
                 img[i][j] = kmeans.cluster_centers_[labels[label_id]]
                 label_id += 1
 
         # Convert from double to uint8
         img = img * 255
+
         img = np.uint8(img)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         image.image = img
     return images
 
