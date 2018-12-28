@@ -7,6 +7,7 @@ sys.path.append("./")
 
 import cv2
 
+import PanoramaStitching.Stitcher as Stitcher
 import PanoramaStitching.Utils as PanoUtils
 from PanoramaStitching.Logger import LogLevel
 from PanoramaStitching.Logger import logger_instance
