@@ -170,7 +170,7 @@ def panorama_affine(args, main_image, images):
 
             # Geometrically transform image and add border
             img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
-        img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
+        #img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
 
         # Calculate descriptors
         img.calculate_descriptors(matcher)
