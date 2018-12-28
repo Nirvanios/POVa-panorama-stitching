@@ -1,35 +1,76 @@
+import math
+
 import cv2
 import numpy as np
 
 from PanoramaStitching import Blender
+from PanoramaStitching.Logger import logger_instance, LogLevel
 
 
-def project_on_cylinder(img, center, focal):
+def wrap_image_on_cylinder(img1, K):
     """
-    Performs a cylindrical projection of a planar image.
+    Wraps image on a cylinder defined by matrix K (http://ksimek.github.io/2013/08/13/intrinsic/).
+    :param img1: image to wrap
+    :param K: intrinsic matrix
+    :return: transformed image
     """
+    f = K[0, 0]
 
-    if not focal:
-        focal = 750
+    im_h, im_w = img1.shape[:2]
 
-    # define mapping functions
-    scale = focal
-    mapX = lambda y, x: focal * np.tan(x / scale)
-    mapY = lambda y, x: focal / np.cos(x / scale) * y / scale
+    cyl = np.zeros_like(img1)
+    cyl_mask = np.zeros_like(img1)
+    cyl_h, cyl_w = cyl.shape[:2]
+    x_c = float(cyl_w) / 2.0
+    y_c = float(cyl_h) / 2.0
+    for x_cyl in np.arange(0, cyl_w):
+        for y_cyl in np.arange(0, cyl_h):
+            theta = (x_cyl - x_c) / f
+            h = (y_cyl - y_c) / f
 
-    def make_map(y, x):
-        map_x = mapX(y - center[1], x - center[0]) + center[0]
-        map_y = mapY(y - center[1], x - center[0]) + center[1]
-        return np.dstack((map_x, map_y)).astype(np.int16)
+            X = np.array([math.sin(theta), h, math.cos(theta)])
+            X = np.dot(K, X)
+            x_im = X[0] / X[2]
+            if x_im < 0 or x_im >= im_w:
+                continue
 
-    # create the LUTs for x and y coordinates
-    map_xy = np.fromfunction(make_map, img.shape[:2], dtype=np.int16)
-    img_mapped = cv2.remap(img, map_xy, None, cv2.INTER_NEAREST)
+            y_im = X[1] / X[2]
+            if y_im < 0 or y_im >= im_h:
+                continue
 
-    return img_mapped
+            cyl[int(y_cyl), int(x_cyl)] = img1[int(y_im), int(x_im)]
+            cyl_mask[int(y_cyl), int(x_cyl)] = 255
+
+    return cyl, cyl_mask
 
 
-def stitch_images(img1, img2, homography_matrix):
+def stitch_images_affine(img1, img2, M):
+    """
+    Stitch images using affine warp.
+    :param img1: panorama image
+    :param img2: image to stitch
+    :param M: affine matrix
+    :return: stitched image
+    """
+    out1 = cv2.warpAffine(img2, M, (img1.shape[1], img1.shape[0]))
+
+    output = np.zeros(img1.shape)
+
+    x, y = output.shape[:2]
+
+    for i in range(x):
+        for j in range(y):
+            if not img1[i][j].all() and not out1[i][j].all():
+                output[i][j] = 0
+            elif not img1[i][j].all() and out1[i][j].any():
+                output[i][j] = out1[i][j]
+            else:
+                output[i][j] = (img1[i][j])
+
+    return output.astype(np.uint8)
+
+
+def stitch_images_homography(img1, img2, homography_matrix):
     """
     Stitch two images together. Applies homography_matrix on the second image
     :param img1:
@@ -39,8 +80,6 @@ def stitch_images(img1, img2, homography_matrix):
     """
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
-
-    img2 = project_on_cylinder(img2, (rows2 / 2, cols2 / 2), 500)
 
     list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
     temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
@@ -58,7 +97,7 @@ def stitch_images(img1, img2, homography_matrix):
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
 
-    #Blender.alpha_blend(img1, output_img, translation_dist)
+    # Blender.alpha_blend(img1, output_img, translation_dist)
 
     temp_image[translation_dist[1]:rows1 + translation_dist[1],
     translation_dist[0]:cols1 + translation_dist[0]] = img1

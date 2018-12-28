@@ -18,7 +18,10 @@ class Matcher:
         if detector_type == KeyPointDetector.SURF:
             self.key_point_detector = cv2.xfeatures2d.SURF_create()
 
-        self.desc_matcher = cv2.DescriptorMatcher_create("BruteForce")
+        # setup FLANN detector
+        index_params = dict(algorithm=0, trees=5)
+        search_params = dict(checks=50)
+        self.desc_matcher = cv2.FlannBasedMatcher(index_params, search_params)
 
         self.matches_required = matches_required
 
@@ -34,16 +37,17 @@ class Matcher:
         return key_points, descriptors
 
     def match_key_points(self, key_points_a, key_points_b, descriptors_a, descriptors_b,
-                         ratio, threshold):
+                         ratio, threshold, method="homography"):
         """
         match key points given by SIFT/SURF
+        :param method: homography/affine
         :param key_points_a: key points of first image
         :param key_points_b: key points of second image
         :param descriptors_a: descriptors of first image
         :param descriptors_b: descriptors of second image
         :param ratio:
         :param threshold:
-        :return: matches and homography if
+        :return: matches and homography/affine matrix
         """
         raw_matches = self.desc_matcher.knnMatch(descriptors_a, descriptors_b, 2)
         matches = []
@@ -57,8 +61,12 @@ class Matcher:
             points_a = np.float32([key_points_a[i] for (_, i) in matches])
             points_b = np.float32([key_points_b[i] for (i, _) in matches])
 
-            (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
-                                             threshold)
+            if method == "homography":
+                (H, status) = cv2.findHomography(points_a, points_b, cv2.RANSAC,
+                                                 threshold)
+            elif method == "affine":
+                (H, status) = cv2.estimateAffine2D(points_a, points_b, cv2.RANSAC,
+                                                   ransacReprojThreshold=threshold)
 
             return matches, H, status
 
