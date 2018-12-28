@@ -193,6 +193,20 @@ def panorama_affine(args, main_image, images):
 def main(args):
     logger_instance.set_debug(args.debug)
 
+    # Setup key point detectors
+    global matcher
+    if args.kp_detector == 'SIFT':
+        logger_instance.log(LogLevel.STATUS, "Using SIFT key point detector")
+        matcher = Matcher(KeyPointDetector.SIFT, 4)
+    elif args.kp_detector == 'SURF':
+        logger_instance.log(LogLevel.STATUS, "Using SURF key point detector")
+        matcher = Matcher(KeyPointDetector.SURF, 4)
+
+    logger_instance.log(LogLevel.STATUS, "Using " + args.pano_type + " transform")
+
+    if args.cyl_wrap:
+        logger_instance.log(LogLevel.STATUS, "Using cylinder projection on images")
+
     # Load images in gained folder
     images = PanoUtils.load_images(args.folder)
     logger_instance.log(LogLevel.INFO, "Images in folder:")
@@ -221,17 +235,6 @@ def main(args):
     logger_instance.log(LogLevel.STATUS, "Color balancing...")
     images = PanoUtils.balance_color(images, main_image.image)
     logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
-
-    # Setup key point detectors
-    global matcher
-    if args.kp_detector == 'SIFT':
-        logger_instance.log(LogLevel.STATUS, "Using SIFT")
-        matcher = Matcher(KeyPointDetector.SIFT, 4)
-    elif args.kp_detector == 'SURF':
-        logger_instance.log(LogLevel.STATUS, "Using SURF")
-        matcher = Matcher(KeyPointDetector.SURF, 4)
-
-    logger_instance.log(LogLevel.STATUS, "Using " + args.pano_type)
 
     # Call panorama stitcher using some method
     if args.pano_type == 'HOMOGRAPHY':
