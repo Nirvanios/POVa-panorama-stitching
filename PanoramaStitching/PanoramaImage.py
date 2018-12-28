@@ -28,6 +28,7 @@ class MainPanoramaImage(PanoramaImage):
     def match(self, start, end, images, matcher):
         """
         Match key_points of main panorama image and other images
+        :param matcher:
         :param start: start index in images list
         :param end: end index in images list
         :param images: list of PanoramaImage
