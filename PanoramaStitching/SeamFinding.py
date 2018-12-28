@@ -47,16 +47,23 @@ def get_watershed_image(image, mask):
     epsilon = 0.01 * cv2.arcLength(contours[0], True)
     approx = cv2.approxPolyDP(contours[0], epsilon, True)
     box_img = cv2.cornerHarris(mask, 5, 3, 0.04)
+    """
     ret, box_img = cv2.threshold(box_img, 0.1 * box_img.max(), 255, 0)
     dst = np.uint8(box_img)
     ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
     corners = cv2.cornerSubPix(image, np.float32(centroids), (5, 5), (-1, -1), criteria)
     corners = corners.astype(int)
-    ext_left = (np.sort(corners[:, 0]))[0]
-    ext_right = (np.sort(corners[:, 0]))[-1]
-    ext_left2 = (np.sort(corners[:, 0]))[1]
-    ext_right2 = (np.sort(corners[:, 0]))[-2]
+        """
+    flat = box_img.flatten()
+    indices = np.argpartition(flat, -4)[-4:]
+    indices = indices[np.argsort(-flat[indices])]
+    corners = np.unravel_index(indices, box_img.shape)
+    corners = corners[1]
+    ext_left = (np.sort(corners))[0]
+    ext_right = (np.sort(corners))[-1]
+    ext_left2 = (np.sort(corners))[1]
+    ext_right2 = (np.sort(corners))[-2]
 
     gray = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     gray = np.where(mask == 0, mask, gray)
@@ -260,6 +267,10 @@ def graph_cut_blend(image_a, image_b):
             while left == -1 and y - i > 0:
                 i += 1
                 left = segmented_image[x, y - i]
+            if y - i <= 0 and right != -1:
+                copy_black = True
+                current_line = x
+
 
         if segmented_image[x, y] == -1 \
                 and left != right \
