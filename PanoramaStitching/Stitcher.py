@@ -53,22 +53,41 @@ def stitch_images_affine(img1, img2, M):
     :param M: affine matrix
     :return: stitched image
     """
-    out1 = cv2.warpAffine(img2, M, (img1.shape[1], img1.shape[0]))
+    rows1, cols1 = img1.shape[:2]
+    rows2, cols2 = img2.shape[:2]
 
-    output = np.zeros(img1.shape)
+    list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
+    temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
 
-    x, y = output.shape[:2]
+    list_of_points_2 = cv2.transform(temp_points, M)
+    list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
 
-    for i in range(x):
-        for j in range(y):
-            if not img1[i][j].all() and not out1[i][j].all():
-                output[i][j] = 0
-            elif not img1[i][j].all() and out1[i][j].any():
-                output[i][j] = out1[i][j]
-            else:
-                output[i][j] = (img1[i][j])
+    [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
+    [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel() + 0.5)
 
-    return output.astype(np.uint8)
+    translation_dist = [-x_min, -y_min]
+
+    M = np.vstack([M, [0, 0, 1]])
+    h_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
+
+    output_img = cv2.warpPerspective(img2, h_translation.dot(M), (x_max - x_min, y_max - y_min))
+
+    temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
+
+    # Blender.alpha_blend(img1, output_img, translation_dist)
+
+    temp_image[translation_dist[1]:rows1 + translation_dist[1],
+    translation_dist[0]:cols1 + translation_dist[0]] = img1
+
+    width, height, _ = temp_image.shape
+
+    for x in range(width):
+        for y in range(height):
+            maxpix = temp_image[x, y].max()
+            if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
+                temp_image[x, y] = output_img[x, y]
+
+    return temp_image
 
 
 def stitch_images_homography(img1, img2, homography_matrix):

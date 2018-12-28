@@ -1,8 +1,3 @@
-import threading
-
-from PanoramaStitching.Logger import logger_instance, LogLevel
-
-
 class PanoramaImage:
     checked = False
     key_points = None
@@ -13,9 +8,17 @@ class PanoramaImage:
         self.image = image
 
     def calculate_descriptors(self, matcher):
+        """
+        Calculate descriptors in image matches
+        :param matcher: matcher of images
+        """
         self.key_points, self.descriptors = matcher.detect_and_describe(self.image)
 
     def get_descriptors(self):
+        """
+        Getter to print key points and descriptors
+        :return key_points, descriptors
+        """
         return self.key_points, self.descriptors
 
 
@@ -31,6 +34,7 @@ class MainPanoramaImage(PanoramaImage):
         """
         for i in range(start, end):
             if not images[i].checked:
+                # Try to match key points
                 m = matcher.match_key_points(images[i].key_points, self.key_points,
                                              images[i].descriptors, self.descriptors, 0.7,
                                              4.5)
@@ -45,12 +49,12 @@ class MainPanoramaImage(PanoramaImage):
         :param method: homography/affine
         :param images: list of images
         :param matcher: key point matcher
-        :return:
         """
         self.matches.clear()
 
         for img in images:
             if not img.checked:
+                # Try to match key points
                 m = matcher.match_key_points(img.key_points, self.key_points,
                                              img.descriptors, self.descriptors, 0.7,
                                              4.5, method)
@@ -67,6 +71,8 @@ class MainPanoramaImage(PanoramaImage):
         max_matches = 0
         max_index = -1
         cnt = 0
+
+        # Iterate over matches and save count
         for match in self.matches:
             match_count = len(match[0][0])
             if match_count > max_matches:
