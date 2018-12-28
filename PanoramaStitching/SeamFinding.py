@@ -241,8 +241,6 @@ def graph_cut_blend(image_a, image_b):
     copy_black = False
     current_line = 0
     for (x, y), item in np.ndenumerate(segmented_image):
-        if x == 186 and y == 583:
-            print()
         if current_line != x:
             copy_black = False
         if x == 0 or y == 0 or x == height - 1 or y == width - 1:
@@ -257,6 +255,8 @@ def graph_cut_blend(image_a, image_b):
                     i += 1
                     rightmost = segmented_image[x, y + i]
                 if y + i >= width - 1:
+                    copy_black = True
+                    current_line = x
                     continue
             i = 1
             if left == right:
@@ -270,6 +270,7 @@ def graph_cut_blend(image_a, image_b):
             if y - i <= 0 and right != -1:
                 copy_black = True
                 current_line = x
+                continue
 
 
         if segmented_image[x, y] == -1 \

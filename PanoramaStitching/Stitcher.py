@@ -87,6 +87,7 @@ def stitch_images(img1, img2, matrix, transformation_type):
 
     if True:
         # temp_image = SeamFinding.graph_cut_blend(temp_image, output_img)
+        print(width, height)
         temp_image = Blender.alpha_blend(temp_image, output_img, translation_dist)
     else:
         for x in range(width):
