@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def alpha_blend(image_a, image_b, translation_dist):
+def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
     """
     Blends two images together
     :param image_a: first image
@@ -36,8 +36,13 @@ def alpha_blend(image_a, image_b, translation_dist):
         for y in range(rows):
             if np.all(image_a[y, x] - image_b[y, x] > 50) and np.all(image_b[y, x] != (0, 0, 0)):
                 result[y, x] = image_b[y, x]
-            else:
+            elif mask[y, x] == 255:
                 result[y, x, :] = np.clip((value * image_a[y, x, :]) + ((1.0 - value) * image_b[y, x, :]), 0, 255)
+            else:
+                if np.all(image_a[y, x] > image_b[y, x]):
+                    result[y, x] = image_a[y, x]
+                else:
+                    result[y, x] = image_b[y, x]
         if (x > ext_left) and (x < ext_right):
             value += step
 
