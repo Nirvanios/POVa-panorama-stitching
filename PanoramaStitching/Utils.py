@@ -17,7 +17,7 @@ def load_images(folder):
 
     # Load all .png files in folder
     filenames = glob.glob(folder + "/*.png")
-    images = [cv2.resize(cv2.imread(img), (480, 320)) for img in filenames]
+    images = [cv2.resize(cv2.imread(img), (640, 480)) for img in filenames]
     ret = []
 
     # Add images and file names into list
