@@ -79,6 +79,51 @@ def balance_color(images, main_image):
     return images
 
 
+def balance_global_image(image):
+    """
+    Balance color of images using k-means clustering
+    :param image: image of panorama
+    :return: changed images
+    """
+    # Convert to RGB form and float type
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    img = np.float64(image) / 255
+
+    # Get shape of the image
+    w, h, d = tuple(img.shape)
+    assert d == 3
+
+    # Reduce one dimension
+    img_arr = np.reshape(img, (w * h, d))
+
+    # Use only part od random intensities in image
+    img_arr_sample = shuffle(img_arr, random_state=0)[:10000]
+
+    # Train
+    kmeans = KMeans(n_clusters=64, random_state=0).fit(img_arr_sample)
+
+    labels = kmeans.predict(img_arr)
+
+    img = np.zeros((w, h, kmeans.cluster_centers_.shape[1]))
+    label_id = 0
+
+    # Iterate
+    for i in range(w):
+        for j in range(h):
+            # Set pixel intensity
+            img[i][j] = kmeans.cluster_centers_[labels[label_id]]
+            label_id += 1
+
+    # Convert from double to uint8
+    img = img * 255
+
+    img = np.uint8(img)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    image = img
+
+    return image
+
+
 def crop_black(image):
     """
     Crop black parts of the image

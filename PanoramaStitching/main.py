@@ -142,6 +142,11 @@ def panorama(args, main_image, images):
     # Create wonderful panorama
     panorama_loop(args, images, panorama_image)
 
+    # Global color reduction
+    logger_instance.log(LogLevel.STATUS, "Color balancing...")
+    panorama_image.image = PanoUtils.balance_global_image(panorama_image.image)
+    logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
+
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
     cv2.imwrite(args.dest, panorama_image.image)
 
@@ -183,6 +188,11 @@ def panorama_affine(args, main_image, images):
     # Create awesome panorama
     panorama_loop(args, images, panorama_image)
     panorama_image.image = PanoUtils.crop_black(panorama_image.image)
+
+    # Color balance
+    logger_instance.log(LogLevel.STATUS, "Color balancing...")
+    panorama_image.image = PanoUtils.balance_global_image(panorama_image.image)
+    logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
 
     # Save it!
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
@@ -232,9 +242,9 @@ def main(args):
     logger_instance.log(LogLevel.NONE, "\t\t" + main_image.name)
 
     # Color balancing of all images
-    logger_instance.log(LogLevel.STATUS, "Color balancing...")
-    images = PanoUtils.balance_color(images, main_image.image)
-    logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
+    #logger_instance.log(LogLevel.STATUS, "Color balancing...")
+    #images = PanoUtils.balance_color(images, main_image.image)
+    #logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
 
     # Call panorama stitcher using some method
     if args.pano_type == 'HOMOGRAPHY':
