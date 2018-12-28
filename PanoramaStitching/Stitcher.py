@@ -51,7 +51,7 @@ def stitch_images(img1, img2, matrix, transformation_type):
     :param transformation_type: homography or affine
     :param img1: panorama image
     :param img2: image to stitch
-    :param matrix: affine/homogaphy matrix
+    :param matrix: affine/homography matrix
     :return: stitched image
     """
     rows1, cols1 = img1.shape[:2]
@@ -65,7 +65,7 @@ def stitch_images(img1, img2, matrix, transformation_type):
     elif transformation_type == "homography":
         list_of_points_2 = cv2.perspectiveTransform(temp_points, matrix)
     else:
-        raise Exception("Invalid call, unsuported transformation type: " + transformation_type)
+        raise Exception("Invalid call, unsupported transformation type: " + transformation_type)
     list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
 
     [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
@@ -79,8 +79,6 @@ def stitch_images(img1, img2, matrix, transformation_type):
     output_img = cv2.warpPerspective(img2, h_translation.dot(matrix), (x_max - x_min, y_max - y_min))
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
-
-    # Blender.alpha_blend(img1, output_img, translation_dist)
 
     temp_image[translation_dist[1]:rows1 + translation_dist[1],
     translation_dist[0]:cols1 + translation_dist[0]] = img1
@@ -99,7 +97,5 @@ def stitch_images(img1, img2, matrix, transformation_type):
                 maxpix = temp_image[x, y].max()
                 if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
                     temp_image[x, y] = output_img[x, y]
-
-    # temp_image = Blender.alpha_blend(img1, output_img, translation_dist)
 
     return temp_image

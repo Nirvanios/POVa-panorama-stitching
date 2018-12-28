@@ -130,28 +130,24 @@ def crop_black(image):
     :param image: input image
     :return: cropped image
     """
-    # Mask of non-black pixels (assuming image has a single channel).
     gr_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     mask = gr_image > 0
 
-    # Coordinates of non-black pixels.
     coords = np.argwhere(mask)
 
-    # Bounding box of non-black pixels.
     x0, y0 = coords.min(axis=0)
-    x1, y1 = coords.max(axis=0) + 1  # slices are exclusive at the top
+    x1, y1 = coords.max(axis=0) + 1
 
-    # Get the contents of the bounding box.
     cropped = image[x0:x1, y0:y1]
     return cropped
 
 
 def get_overlapping_mask(image_a, image_b):
     """
-    Creates mask of overlaping region
-    :param image_a: firrst image
+    Creates mask of overlapping region
+    :param image_a: first image
     :param image_b: second image
-    :return: mask of overlaping region
+    :return: mask of overlapping region
     """
     gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
     gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)

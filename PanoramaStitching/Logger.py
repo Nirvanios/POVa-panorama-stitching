@@ -108,6 +108,10 @@ class Logger:
         self.print_debug = value
 
     def set_time(self, value):
+        """
+        Enable/disable printing type in messages
+        :param value: bool
+        """
         self.print_time = value
 
 
