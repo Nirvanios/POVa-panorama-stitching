@@ -150,6 +150,7 @@ def panorama(args, main_image, images):
     # Save created panorama
     print_image_info(images)
 
+
 def main(args):
     logger_instance.set_debug(args.debug)
 

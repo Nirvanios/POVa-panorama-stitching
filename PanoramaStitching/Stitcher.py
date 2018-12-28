@@ -64,6 +64,8 @@ def stitch_images(img1, img2, matrix, transformation_type):
         list_of_points_2 = cv2.transform(temp_points, matrix)
     elif transformation_type == "homography":
         list_of_points_2 = cv2.perspectiveTransform(temp_points, matrix)
+    else:
+        raise Exception("Invalid call, unsuported transformation type: " + transformation_type)
     list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
 
     [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
@@ -85,9 +87,11 @@ def stitch_images(img1, img2, matrix, transformation_type):
 
     width, height, _ = temp_image.shape
 
+    panorama_mid_point = np.int32(list_of_points_1[2] / 2 - translation_dist)
+    to_add_mid_point = np.int32(list_of_points_2[2] / 2 - translation_dist)
+
     if True:
         # temp_image = SeamFinding.graph_cut_blend(temp_image, output_img)
-        print(width, height)
         temp_image = Blender.alpha_blend(temp_image, output_img, translation_dist)
     else:
         for x in range(width):
