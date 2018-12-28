@@ -107,5 +107,8 @@ class Logger:
         """
         self.print_debug = value
 
+    def set_time(self, value):
+        self.print_time = value
+
 
 logger_instance = Logger(print_debug=False, print_time=False)

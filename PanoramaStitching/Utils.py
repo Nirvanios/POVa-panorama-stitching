@@ -85,10 +85,17 @@ def crop_black(image):
     :param image: input image
     :return: cropped image
     """
-    _, thresh = cv2.threshold(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 1, 255, cv2.THRESH_BINARY)
-    _, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnt = contours[0]
-    x, y, w, h = cv2.boundingRect(cnt)
+    # Mask of non-black pixels (assuming image has a single channel).
+    gr_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    mask = gr_image > 0
 
-    crop = image[y:y + h, x:x + w]
-    return crop
+    # Coordinates of non-black pixels.
+    coords = np.argwhere(mask)
+
+    # Bounding box of non-black pixels.
+    x0, y0 = coords.min(axis=0)
+    x1, y1 = coords.max(axis=0) + 1  # slices are exclusive at the top
+
+    # Get the contents of the bounding box.
+    cropped = image[x0:x1, y0:y1]
+    return cropped

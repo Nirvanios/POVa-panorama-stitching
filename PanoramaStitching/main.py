@@ -3,10 +3,7 @@ import datetime
 import os
 import cv2
 
-# Because of Windows
-import sys
-sys.path.append("./")
-
+import numpy as np
 import PanoramaStitching.Stitcher as Stitcher
 import PanoramaStitching.Utils as PanoUtils
 from PanoramaStitching.Logger import LogLevel
@@ -14,6 +11,10 @@ from PanoramaStitching.Logger import logger_instance
 from PanoramaStitching.Matcher import KeyPointDetector
 from PanoramaStitching.Matcher import Matcher
 from PanoramaStitching.PanoramaImage import MainPanoramaImage
+
+# Because of Windows
+import sys
+sys.path.append("./")
 
 # Parser
 parser = argparse.ArgumentParser(description='Panorama stitching.')
@@ -38,6 +39,9 @@ parser.add_argument('--pano_type',
                     default='HOMOGRAPHY',
                     choices=['HOMOGRAPHY', 'AFFINE'],
                     help='type of panorama HOMOGRAPHY or AFFINE')
+parser.add_argument('--cyl_wrap', default=False,
+                    action='store_true',
+                    help='Wrap images on a cylinder')
 
 parser.add_argument('--debug', default=False,
                     action='store_true',
@@ -119,9 +123,17 @@ def panorama(args, main_image, images):
     """
 
     # Calculate descriptors
-    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors... ")
+    f = 750
     for img in images:
+        if args.cyl_wrap:
+            h, w = img.image.shape[:2]
+            K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
+
+            # Geometrically transform image and add border
+            img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
         img.calculate_descriptors(matcher)
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors... Done")
 
     # Get main panorama image
     panorama_image = MainPanoramaImage(main_image.name, main_image.image)
@@ -149,18 +161,20 @@ def panorama_affine(args, main_image, images):
     f = 750
 
     # Calculate descriptors
-    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors")
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors...")
     for img in images:
-        # Create matrix of cylindrical transformation
-        h, w = img.image.shape[:2]
-        K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
+        if args.cyl_wrap:
+            # Create matrix of cylindrical transformation
+            h, w = img.image.shape[:2]
+            K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
 
-        # Geometrically transform image and add border
-        img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
-        img.image = cv2.copyMakeBorder(img.image, 500, 500, 500, 500, cv2.BORDER_CONSTANT)
+            # Geometrically transform image and add border
+            img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
+        img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
 
         # Calculate descriptors
         img.calculate_descriptors(matcher)
+    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors... Done")
 
     # Get main image
     panorama_image = MainPanoramaImage(main_image.name, main_image.image)
@@ -178,6 +192,20 @@ def panorama_affine(args, main_image, images):
 
 def main(args):
     logger_instance.set_debug(args.debug)
+
+    # Setup key point detectors
+    global matcher
+    if args.kp_detector == 'SIFT':
+        logger_instance.log(LogLevel.STATUS, "Using SIFT key point detector")
+        matcher = Matcher(KeyPointDetector.SIFT, 4)
+    elif args.kp_detector == 'SURF':
+        logger_instance.log(LogLevel.STATUS, "Using SURF key point detector")
+        matcher = Matcher(KeyPointDetector.SURF, 4)
+
+    logger_instance.log(LogLevel.STATUS, "Using " + args.pano_type + " transform")
+
+    if args.cyl_wrap:
+        logger_instance.log(LogLevel.STATUS, "Using cylinder projection on images")
 
     # Load images in gained folder
     images = PanoUtils.load_images(args.folder)
@@ -206,18 +234,7 @@ def main(args):
     # Color balancing of all images
     logger_instance.log(LogLevel.STATUS, "Color balancing...")
     images = PanoUtils.balance_color(images, main_image.image)
-    logger_instance.log(LogLevel.STATUS, "Done.")
-
-    # Call key point detectors
-    global matcher
-    if args.kp_detector == 'SIFT':
-        logger_instance.log(LogLevel.STATUS, "Using SIFT")
-        matcher = Matcher(KeyPointDetector.SIFT, 4)
-    elif args.kp_detector == 'SURF':
-        logger_instance.log(LogLevel.STATUS, "Using SURF")
-        matcher = Matcher(KeyPointDetector.SURF, 4)
-
-    logger_instance.log(LogLevel.STATUS, "Using " + args.pano_type)
+    logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
 
     # Call panorama stitcher using some method
     if args.pano_type == 'HOMOGRAPHY':
