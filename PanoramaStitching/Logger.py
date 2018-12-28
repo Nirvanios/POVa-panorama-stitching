@@ -31,6 +31,7 @@ class LogLevel(Enum):
             return BColors.HEADER
 
 
+# Colors in console
 class BColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -48,7 +49,7 @@ class Logger:
     """
     def __init__(self, print_debug=False, print_time=False):
         """
-
+        Initialize logger
         :param print_debug: print messages marked LogLevel.DEBUG
         :param print_time: print time with the message
         """
@@ -56,6 +57,11 @@ class Logger:
         self.print_time = print_time
 
     def log(self, log_level, message):
+        """
+        Write log to output
+        :param log_level: level of the log
+        :param message: text output
+        """
         if not self.print_debug and log_level == LogLevel.DEBUG:
             return
 
