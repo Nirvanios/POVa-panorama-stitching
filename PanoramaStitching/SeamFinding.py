@@ -75,14 +75,7 @@ def get_watershed_image(image, mask):
     epsilon = 0.01 * cv2.arcLength(contours[0], True)
     approx = cv2.approxPolyDP(contours[0], epsilon, True)
     box_img = cv2.cornerHarris(mask, 5, 3, 0.04)
-    """
-    ret, box_img = cv2.threshold(box_img, 0.1 * box_img.max(), 255, 0)
-    dst = np.uint8(box_img)
-    ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv2.cornerSubPix(image, np.float32(centroids), (5, 5), (-1, -1), criteria)
-    corners = corners.astype(int)
-        """
+
     flat = box_img.flatten()
     indices = np.argpartition(flat, -4)[-4:]
     indices = indices[np.argsort(-flat[indices])]
@@ -102,8 +95,6 @@ def get_watershed_image(image, mask):
     for i in range(height):
         if mask[i, half] != 255:
             gray[i, half] = 255
-    # cv2.imshow('gray2', gray)
-    # cv2.waitKey()
 
     ret, markers = cv2.connectedComponents(gray)
 
@@ -125,8 +116,9 @@ def get_watershed_image(image, mask):
         for y in range(height):
             if watershed_image[y, x] == -1:
                 stepped_over[y] = True
-            if ((mask[y, x] == 0 and x < ext_left2 + 1) or (not stepped_over[y] and mask[y, x] == 255)) and watershed_image[
-                y, x] != -1:
+            if ((mask[y, x] == 0 and x < ext_left2 + 1) or (not stepped_over[y] and mask[y, x] == 255)) and \
+                    watershed_image[
+                        y, x] != -1:
                 watershed_image[y, x] = -5
 
     new_watershed = watershed_image
@@ -134,8 +126,7 @@ def get_watershed_image(image, mask):
     changed = True
     original_mask[watershed_image == -5] = [255, 0, 0]
     original_mask[watershed_image == -10] = [0, 255, 0]
-    # cv2.imshow('water_b', original_mask)
-    # cv2.waitKey()
+
     while changed:
         changed = False
         iteration += 1
@@ -156,20 +147,15 @@ def get_watershed_image(image, mask):
                 stepped_over[y] = True
             if -x > -(width - ext_right2):
                 stepped_over[mask[:, x] == 0] = True
-            if ((mask[y, -x] == 0 and -x > -(width - ext_right2)) or (not stepped_over[y] and mask[y, -x] == 255)) and watershed_image[
-                y, -x] != -1:
+            if ((mask[y, -x] == 0 and -x > -(width - ext_right2)) or (not stepped_over[y] and mask[y, -x] == 255)) and \
+                    watershed_image[
+                        y, -x] != -1:
                 watershed_image[y, -x] = -4
 
     new_watershed = watershed_image
     iteration = 0
     changed = True
-    """
-    original_mask[watershed_image == -4] = [255, 0, 255]
-    original_mask[watershed_image == -5] = [255, 0, 0]
-    original_mask[watershed_image == -10] = [0, 255, 0]
-    cv2.imshow('water_m', original_mask)
-    cv2.waitKey()
-    """
+
     while changed:
         changed = False
         iteration += 1
@@ -181,13 +167,6 @@ def get_watershed_image(image, mask):
                     changed = True
         watershed_image = new_watershed
 
-    """
-    original_mask[watershed_image == -4] = [255, 0, 255]
-    original_mask[watershed_image == -5] = [255, 0, 0]
-    original_mask[watershed_image == -10] = [0, 255, 0]
-
-    cv2.imshow('water?', original_mask)
-    """
     watershed_image[watershed_image == -10] = -6
     watershed_image[watershed_image == -4] = -10
 
@@ -195,9 +174,6 @@ def get_watershed_image(image, mask):
     original_mask[watershed_image == -10] = [0, 255, 0]
     original_mask[watershed_image == -6] = [255, 0, 255]
     original_mask[watershed_image == -1] = [0, 0, 255]
-
-    # cv2.imshow('water', original_mask)
-    # cv2.waitKey()
 
     return watershed_image
 
@@ -210,7 +186,6 @@ def find_cut_seam(segmented_image, inverted_image, mask):
     :param mask: mask of overlapping region
     :return: List of node pairs where is minimal cut found
     """
-    original_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
     height, width = segmented_image.shape
     Edge = namedtuple("Edge", ["node_1", "node_2"])
     edges = {}
@@ -272,8 +247,7 @@ def graph_cut_blend(image_a, image_b):
     difference_image = get_inverted_difference_image(gray_a, gray_b)
     mask = Utils.get_overlapping_mask(image_a, image_b)
     difference_image = np.where(mask == 255, difference_image, 0)
-    # cv2.imshow('difference', difference_image)
-    # cv2.waitKey()
+
     segmented_image = get_watershed_image(difference_image, mask)
     cut_nodes = np.array(list(find_cut_seam(segmented_image, difference_image, mask)))
     cut_nodes[cut_nodes == -2] = -10
@@ -302,7 +276,7 @@ def graph_cut_blend(image_a, image_b):
             i = 1
             if left == right:
                 if not copy_black:
-                        new_image_a[x, y] = image_b[x, y]
+                    new_image_a[x, y] = image_b[x, y]
                 continue
 
             while left == -1 and y - i > 0:
@@ -312,7 +286,6 @@ def graph_cut_blend(image_a, image_b):
                 copy_black = True
                 current_line = x
                 continue
-
 
         if segmented_image[x, y] == -1 \
                 and left != right \
@@ -325,11 +298,6 @@ def graph_cut_blend(image_a, image_b):
                 copy_black = True
             current_line = x
         if not copy_black:
-                new_image_a[x, y] = image_b[x, y]
-
-    """
-    cv2.imshow('new_im', new_image_a)
-    cv2.waitKey()
-    """
+            new_image_a[x, y] = image_b[x, y]
 
     return new_image_a
