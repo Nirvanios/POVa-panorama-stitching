@@ -14,6 +14,7 @@ from PanoramaStitching.PanoramaImage import MainPanoramaImage
 
 # Because of Windows
 import sys
+
 sys.path.append("./")
 
 # Parser
@@ -93,16 +94,11 @@ def panorama_loop(args, images, panorama_image):
 
             # Use homography or affine transformation
             matches, h, status = panorama_image.matches[index][0]
-            if args.pano_type == "HOMOGRAPHY":
-                panorama_image.image = Stitcher.stitch_images_homography(panorama_image.image,
-                                                                         panorama_image.matches[index][1].image,
-                                                                         h)
-                panorama_image.image = PanoUtils.crop_black(panorama_image.image)
-            elif args.pano_type == "AFFINE":
-                panorama_image.image = Stitcher.stitch_images_affine(panorama_image.image,
-                                                                     panorama_image.matches[index][1].image,
-                                                                     h)
 
+            panorama_image.image = Stitcher.stitch_images(panorama_image.image,
+                                                          panorama_image.matches[index][1].image,
+                                                          h,
+                                                          args.pano_type.lower())
             # Changed image, continue
             panorama_image.matches[index][1].checked = True
             added = True
@@ -148,57 +144,11 @@ def panorama(args, main_image, images):
     logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
 
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
+    logger_instance.log(LogLevel.INFO, "Final image location: " + args.dest)
     cv2.imwrite(args.dest, panorama_image.image)
 
     # Save created panorama
     print_image_info(images)
-
-
-def panorama_affine(args, main_image, images):
-    """
-    Affine panorama.
-    :param args: program arguments
-    :param main_image: main panorama image
-    :param images: list of PanoramaImage
-    """
-
-    # Set focal
-    f = 750
-
-    # Calculate descriptors
-    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors...")
-    for img in images:
-        if args.cyl_wrap:
-            # Create matrix of cylindrical transformation
-            h, w = img.image.shape[:2]
-            K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
-
-            # Geometrically transform image and add border
-            img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
-        #img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
-
-        # Calculate descriptors
-        img.calculate_descriptors(matcher)
-    logger_instance.log(LogLevel.STATUS, "Calculating image descriptors... Done")
-
-    # Get main image
-    panorama_image = MainPanoramaImage(main_image.name, main_image.image)
-    main_image.checked = True
-
-    # Create awesome panorama
-    panorama_loop(args, images, panorama_image)
-    panorama_image.image = PanoUtils.crop_black(panorama_image.image)
-
-    # Color balance
-    logger_instance.log(LogLevel.STATUS, "Color balancing...")
-    panorama_image.image = PanoUtils.balance_global_image(panorama_image.image)
-    logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
-
-    # Save it!
-    logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
-    cv2.imwrite(args.dest, panorama_image.image)
-    print_image_info(images)
-
 
 def main(args):
     logger_instance.set_debug(args.debug)
@@ -246,11 +196,8 @@ def main(args):
     #images = PanoUtils.balance_color(images, main_image.image)
     #logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
 
-    # Call panorama stitcher using some method
-    if args.pano_type == 'HOMOGRAPHY':
-        panorama(args, main_image, images)
-    elif args.pano_type == 'AFFINE':
-        panorama_affine(args, main_image, images)
+    # Call panorama stitcher
+    panorama(args, main_image, images)
 
 
 if __name__ == "__main__":

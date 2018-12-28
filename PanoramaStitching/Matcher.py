@@ -4,6 +4,7 @@ import numpy as np
 
 from PanoramaStitching.Logger import logger_instance, LogLevel
 
+
 # Set key point detector enum
 class KeyPointDetector(Enum):
     SIFT = 1
