@@ -14,6 +14,7 @@ from PanoramaStitching.PanoramaImage import MainPanoramaImage
 
 # Because of Windows
 import sys
+
 sys.path.append("./")
 
 # Parser
@@ -93,16 +94,11 @@ def panorama_loop(args, images, panorama_image):
 
             # Use homography or affine transformation
             matches, h, status = panorama_image.matches[index][0]
-            if args.pano_type == "HOMOGRAPHY":
-                panorama_image.image = Stitcher.stitch_images_homography(panorama_image.image,
-                                                                         panorama_image.matches[index][1].image,
-                                                                         h)
-                panorama_image.image = PanoUtils.crop_black(panorama_image.image)
-            elif args.pano_type == "AFFINE":
-                panorama_image.image = Stitcher.stitch_images_affine(panorama_image.image,
-                                                                     panorama_image.matches[index][1].image,
-                                                                     h)
 
+            panorama_image.image = Stitcher.stitch_images(panorama_image.image,
+                                                          panorama_image.matches[index][1].image,
+                                                          h,
+                                                          args.pano_type.lower())
             # Changed image, continue
             panorama_image.matches[index][1].checked = True
             added = True
@@ -170,7 +166,7 @@ def panorama_affine(args, main_image, images):
 
             # Geometrically transform image and add border
             img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
-        #img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
+        # img.image = cv2.copyMakeBorder(img.image, 100, 100, 1000, 1000, cv2.BORDER_CONSTANT)
 
         # Calculate descriptors
         img.calculate_descriptors(matcher)
