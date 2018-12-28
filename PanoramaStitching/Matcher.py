@@ -76,6 +76,8 @@ class Matcher:
             elif method == "affine":
                 (H, status) = cv2.estimateAffine2D(points_a, points_b, cv2.RANSAC,
                                                    ransacReprojThreshold=threshold)
+            else:
+                raise Exception("Invalid call, unsupported transformation type: " + method)
 
             return matches, H, status
 
@@ -94,17 +96,17 @@ class Matcher:
         """
 
         # Create view
-        (hA, wA) = image_a.shape[:2]
-        (hB, wB) = image_b.shape[:2]
-        result = np.zeros((max(hA, hB), wA + wB, 3), dtype="uint8")
-        result[0:hA, 0:wA] = image_a
-        result[0:hB, wA:] = image_b
+        h_a, w_a = image_a.shape[:2]
+        h_b, w_b = image_b.shape[:2]
+        result = np.zeros((max(h_a, h_b), w_a + w_b, 3), dtype="uint8")
+        result[0:h_a, 0:w_a] = image_a
+        result[0:h_b, w_a:] = image_b
 
         # Add line between detected points
         for ((trainIdx, queryIdx), s) in zip(matches, status):
             if s == 1:
                 point_a = (int(key_points_a[queryIdx][0]), int(key_points_a[queryIdx][1]))
-                point_b = (int(key_points_b[trainIdx][0]) + wA, int(key_points_b[trainIdx][1]))
+                point_b = (int(key_points_b[trainIdx][0]) + w_a, int(key_points_b[trainIdx][1]))
                 cv2.line(result, point_a, point_b, (0, 255, 0), 1)
 
         cv2.imshow('matches', result)

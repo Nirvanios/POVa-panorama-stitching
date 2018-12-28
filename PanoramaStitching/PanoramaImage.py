@@ -1,3 +1,5 @@
+
+
 class PanoramaImage:
     checked = False
     key_points = None
@@ -24,25 +26,6 @@ class PanoramaImage:
 
 class MainPanoramaImage(PanoramaImage):
     matches = []
-
-    def match(self, start, end, images, matcher):
-        """
-        Match key_points of main panorama image and other images
-        :param matcher:
-        :param start: start index in images list
-        :param end: end index in images list
-        :param images: list of PanoramaImage
-        """
-        for i in range(start, end):
-            if not images[i].checked:
-                # Try to match key points
-                m = matcher.match_key_points(images[i].key_points, self.key_points,
-                                             images[i].descriptors, self.descriptors, 0.7,
-                                             4.5)
-                if m is None:
-                    continue
-
-                self.matches.append((m, images[i]))
 
     def calculate_matches(self, images, matcher, method="homography"):
         """
