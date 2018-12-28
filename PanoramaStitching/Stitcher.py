@@ -79,7 +79,6 @@ def stitch_images(img1, img2, matrix, transformation_type):
     output_img = cv2.warpPerspective(img2, h_translation.dot(matrix), (x_max - x_min, y_max - y_min))
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
-    temp_image_2 = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
 
     # Blender.alpha_blend(img1, output_img, translation_dist)
 
@@ -90,13 +89,6 @@ def stitch_images(img1, img2, matrix, transformation_type):
 
     panorama_mid_point = np.int32(list_of_points_1[2] / 2 - translation_dist)
     to_add_mid_point = np.int32(list_of_points_2[2] - (list_of_points_2[2] - list_of_points_2[0]) / 2)
-
-    temp_image_2[panorama_mid_point[0,1], panorama_mid_point[0,0]] = 60
-    temp_image_2[to_add_mid_point[0,1], to_add_mid_point[0,0]] = 255
-    cv2.imshow('mid0', temp_image_2)
-    cv2.imshow('panorama', temp_image)
-    cv2.imshow('notPanorama', output_img)
-    cv2.waitKey()
 
     if True:
         # temp_image = SeamFinding.graph_cut_blend(temp_image, output_img)
