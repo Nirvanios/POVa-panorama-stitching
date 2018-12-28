@@ -89,7 +89,7 @@ def stitch_images(img1, img2, matrix, transformation_type):
     width, height, _ = temp_image.shape
 
     panorama_mid_point = np.int32(list_of_points_1[2] / 2 - translation_dist)
-    to_add_mid_point = np.int32(list_of_points_2[2] / 2 - translation_dist)
+    to_add_mid_point = np.int32(list_of_points_2[2] - (list_of_points_2[2] - list_of_points_2[0]) / 2)
 
     temp_image_2[panorama_mid_point[0,1], panorama_mid_point[0,0]] = 60
     temp_image_2[to_add_mid_point[0,1], to_add_mid_point[0,0]] = 255
