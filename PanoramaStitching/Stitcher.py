@@ -124,15 +124,15 @@ def stitch_images_homography(img1, img2, homography_matrix):
 
     width, height, _ = temp_image.shape
 
-    SeamFinding.graph_cut_blend(temp_image, output_img)
-
-    for x in range(width):
-        for y in range(height):
-            maxpix = temp_image[x, y].max()
-            if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
-                temp_image[x, y] = output_img[x, y]
+    if True:
+        temp_image = SeamFinding.graph_cut_blend(temp_image, output_img)
+    else:
+        for x in range(width):
+            for y in range(height):
+                maxpix = temp_image[x, y].max()
+                if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
+                    temp_image[x, y] = output_img[x, y]
 
     # temp_image = Blender.alpha_blend(img1, output_img, translation_dist)
-
 
     return temp_image

@@ -10,7 +10,6 @@ from PanoramaStitching import Utils
 
 def get_inverted_difference_image(image_a, image_b):
     diff = image_a - image_b
-    # max = np.amax(diff, axis=2)
     return 255 - diff
 
 
@@ -20,9 +19,24 @@ def get_3x3_neighbour_elements(matrix, x, y):
     neighbour = np.negative(neighbour)
     for i in range(-1, 2):
         for j in range(-1, 2):
-            if (i != 0 or j != 0) and (width >= x + i >= 0) and (height >= y + j >= 0):
+            if (width >= x + i >= 0) and (height >= y + j >= 0):
                 neighbour[i + 1, j + 1] = matrix[x + i, y + j]
     return neighbour
+
+
+def get_4neighbour_elements(matrix, x, y):
+    width, height = matrix.shape[:2]
+    neighbours = np.ones(4)
+    neighbours = np.negative(neighbours)
+    if x - 1 > 0:
+        neighbours[0] = matrix[x - 1, y]
+    if x + 1 < width:
+        neighbours[1] = matrix[x + 1, y]
+    if y - 1 > 0:
+        neighbours[2] = matrix[x, y - 1]
+    if y + 1 < height:
+        neighbours[3] = matrix[x, y + 1]
+    return neighbours
 
 
 def get_watershed_image(image, mask):
@@ -30,13 +44,22 @@ def get_watershed_image(image, mask):
     original_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     original_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
     contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
-    ext_left = tuple(contours[0][contours[0][:, :, 0].argmin()][0])[0]
-    ext_right = tuple(contours[0][contours[0][:, :, 0].argmax()][0])[0]
+    epsilon = 0.01 * cv2.arcLength(contours[0], True)
+    approx = cv2.approxPolyDP(contours[0], epsilon, True)
+    box_img = cv2.cornerHarris(mask, 5, 3, 0.04)
+    ret, box_img = cv2.threshold(box_img, 0.1 * box_img.max(), 255, 0)
+    dst = np.uint8(box_img)
+    ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+    corners = cv2.cornerSubPix(image, np.float32(centroids), (5, 5), (-1, -1), criteria)
+    corners = corners.astype(int)
+    ext_left = (np.sort(corners[:, 0]))[0]
+    ext_right = (np.sort(corners[:, 0]))[-1]
+    ext_left2 = (np.sort(corners[:, 0]))[1]
+    ext_right2 = (np.sort(corners[:, 0]))[-2]
 
     gray = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     gray = np.where(mask == 0, mask, gray)
-    unknown = cv2.subtract(mask, gray)
-    # cv2.imshow('gray', gray)
     kernel = np.ones((3, 3), np.uint8)
     gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel, iterations=1)
     gray = cv2.dilate(gray, kernel, iterations=2)
@@ -44,64 +67,14 @@ def get_watershed_image(image, mask):
     for i in range(height):
         if mask[i, half] != 255:
             gray[i, half] = 255
-    cv2.imshow('gray2', gray)
-    cv2.waitKey()
+    # cv2.imshow('gray2', gray)
+    # cv2.waitKey()
 
     ret, markers = cv2.connectedComponents(gray)
-    # markers = markers + 1
-    # markers[unknown == 255] = 0
-    label_hue = np.uint8(179 * markers / np.max(markers))
-    blank_ch = 255 * np.ones_like(label_hue)
-    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
-
-    # cvt to BGR for display
-    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-
-    # set bg label to black
-    labeled_img[label_hue == 0] = 0
-
-    # cv2.imshow('labeled.png', labeled_img)
-    # cv2.waitKey()
 
     watershed_image = cv2.watershed(original_image, markers)
     original_mask[watershed_image == -1] = [0, 0, 255]
-    """
-    stepped_over = np.zeros(height, dtype=bool)
-    for y in range(width):
-        for x in range(height):
-            if mask[x, y] == 255:
-                if (not stepped_over[x]) and watershed_image[x, y] == 9:
-                    watershed_image[x, y] = -2
-                elif watershed_image[x, y] == -1:
-                    stepped_over[x] = True
 
-    new_watershed = watershed_image
-    iteration = 0
-    # cv2.waitKey()
-    while True:
-        iteration += 1
-        for (x, y), item in np.ndenumerate(watershed_image):
-            if (y == 180) and x == 121:
-                print()
-            if item == 9 and mask[x, y] == 255:
-                neighbours = get_3x3_neighbour_elements(watershed_image, x, y)
-                if np.any(neighbours == -2):
-                    new_watershed[x, y] = -2
-        if (new_watershed == watershed_image).all():
-            break
-        else:
-            watershed_image = new_watershed
-
-    temp_labels = np.unique(watershed_image[1, :])
-    for item in temp_labels:
-        if item != -1:
-            watershed_image[watershed_image == item] = temp_labels[1]
-
-    temp_labels = np.unique(watershed_image[height - 2, :])
-    for item in temp_labels:
-        if item != -1:
-            watershed_image[watershed_image == item] = temp_labels[1]
-    """
     temp_labels = np.unique(watershed_image[:, 1])
     for item in temp_labels:
         if item != -1:
@@ -112,10 +85,84 @@ def get_watershed_image(image, mask):
         if item != -1:
             watershed_image[watershed_image == item] = -10
 
+    stepped_over = np.zeros(height, dtype=bool)
+    for x in range(1, ext_right):
+        for y in range(height):
+            if watershed_image[y, x] == -1:
+                stepped_over[y] = True
+            if ((mask[y, x] == 0 and x < ext_left2 + 1) or (not stepped_over[y] and mask[y, x] == 255)) and watershed_image[
+                y, x] != -1:
+                watershed_image[y, x] = -5
 
-    # original_mask[watershed_image == -2] = [255, 0, 0]
-    cv2.imshow('water', original_mask)
+    new_watershed = watershed_image
+    iteration = 0
+    changed = True
+    original_mask[watershed_image == -5] = [255, 0, 0]
+    original_mask[watershed_image == -10] = [0, 255, 0]
+    # cv2.imshow('water_b', original_mask)
+    # cv2.waitKey()
+    while changed:
+        changed = False
+        iteration += 1
+        for (x, y), item in np.ndenumerate(watershed_image):
+            if item == -10 and mask[x, y] == 255 and watershed_image[x, y] != -1:
+                neighbours = get_4neighbour_elements(new_watershed, x, y)
+                if np.any(neighbours == -5):
+                    new_watershed[x, y] = -5
+                    changed = True
+        watershed_image = new_watershed
+
+    watershed_image[watershed_image[:, ext_right - 1] == -5, ext_right - 1] = -1
+
+    stepped_over = np.zeros(height, dtype=bool)
+    for x in range(2, (width - ext_left)):
+        for y in range(height):
+            if watershed_image[y, -x] == -1:
+                stepped_over[y] = True
+            if -x > -(width - ext_right2):
+                stepped_over[mask[:, x] == 0] = True
+            if ((mask[y, -x] == 0 and -x > -(width - ext_right2)) or (not stepped_over[y] and mask[y, -x] == 255)) and watershed_image[
+                y, -x] != -1:
+                watershed_image[y, -x] = -4
+
+    new_watershed = watershed_image
+    iteration = 0
+    changed = True
+    """
+    original_mask[watershed_image == -4] = [255, 0, 255]
+    original_mask[watershed_image == -5] = [255, 0, 0]
+    original_mask[watershed_image == -10] = [0, 255, 0]
+    cv2.imshow('water_m', original_mask)
     cv2.waitKey()
+    """
+    while changed:
+        changed = False
+        iteration += 1
+        for (x, y), item in np.ndenumerate(watershed_image):
+            if (item == -10) and mask[x, y] == 255 and watershed_image[x, y] != -1:
+                neighbours = get_4neighbour_elements(new_watershed, x, y)
+                if np.any(neighbours == -4):
+                    new_watershed[x, y] = -4
+                    changed = True
+        watershed_image = new_watershed
+
+    """
+    original_mask[watershed_image == -4] = [255, 0, 255]
+    original_mask[watershed_image == -5] = [255, 0, 0]
+    original_mask[watershed_image == -10] = [0, 255, 0]
+
+    cv2.imshow('water?', original_mask)
+    """
+    watershed_image[watershed_image == -10] = -6
+    watershed_image[watershed_image == -4] = -10
+
+    original_mask[watershed_image == -5] = [255, 0, 0]
+    original_mask[watershed_image == -10] = [0, 255, 0]
+    original_mask[watershed_image == -6] = [255, 0, 255]
+    original_mask[watershed_image == -1] = [0, 0, 255]
+
+    cv2.imshow('water', original_mask)
+    # cv2.waitKey()
 
     return watershed_image
 
@@ -129,11 +176,6 @@ def find_cut_seam(segmented_image, inverted_image, mask):
     for x in range(height):
         for y in range(width):
             if mask[x, y] == 255 and segmented_image[x, y] == -1:
-                """
-                cv2.circle(original_mask, (y, x), 5, (0, 255, 0))
-                cv2.imshow('point', original_mask)
-                cv2.waitKey()
-                """
                 tmp_edge = Edge(node_1=-5, node_2=-5)
                 tmp_edge_inv = Edge(node_1=-5, node_2=-5)
                 up = segmented_image[x - 1, y]
@@ -171,17 +213,7 @@ def find_cut_seam(segmented_image, inverted_image, mask):
     for edge in edges:
         graph.add_edge(edge.node_1, edge.node_2, capacity=edges[edge])
     cut_nodes = nx.minimum_edge_cut(graph, -1, -2)
-    print(cut_nodes)
-    """
-    segments = []
-    for cut in cut_nodes:
-        if cut[0] > 1:
-            segments.append(cut[0])
-        elif
-    for x in width:
-        for y in height:
-            if
-    """
+
     return cut_nodes
 
 
@@ -196,24 +228,54 @@ def graph_cut_blend(image_a, image_b):
     # cv2.waitKey()
     segmented_image = get_watershed_image(difference_image, mask)
     cut_nodes = np.array(list(find_cut_seam(segmented_image, difference_image, mask)))
-    new_image_b = image_b
+    cut_nodes[cut_nodes == -2] = -10
+    cut_nodes[cut_nodes == -1] = -5
+    new_image_a = np.copy(image_a)
     copy_black = False
     current_line = 0
     for (x, y), item in np.ndenumerate(segmented_image):
+        if x == 186 and y == 583:
+            print()
         if current_line != x:
             copy_black = False
         if x == 0 or y == 0 or x == height - 1 or y == width - 1:
             continue
-        if x == 192:
-            print()
-        if segmented_image[x, y] == -1 \
-            and segmented_image[x, y - 1] != segmented_image[x, y + 1] \
-                and (np.any((segmented_image[x, y - 1], segmented_image[x, y + 1]) == cut_nodes)
-                     or np.any((segmented_image[x, y + 1], segmented_image[x, y - 1]) == cut_nodes)):
-            copy_black = True
-            current_line = x
-        if copy_black:
-            new_image_b[x, y] = [0, 0, 0]
+        left = segmented_image[x, y - 1]
+        right = segmented_image[x, y + 1]
+        rightmost = right
+        if segmented_image[x, y] == -1:
+            if copy_black:
+                i = 1
+                while rightmost == -1 and y + i < width - 1:
+                    i += 1
+                    rightmost = segmented_image[x, y + i]
+                if y + i >= width - 1:
+                    continue
+            i = 1
+            if left == right:
+                if not copy_black:
+                        new_image_a[x, y] = image_b[x, y]
+                continue
 
-    cv2.imshow('new_im', new_image_b)
+            while left == -1 and y - i > 0:
+                i += 1
+                left = segmented_image[x, y - i]
+
+        if segmented_image[x, y] == -1 \
+                and left != right \
+                and (any((cut_nodes[:] == [right, left]).all(1))
+                     or any((cut_nodes[:] == [left, right]).all(1))):
+
+            if copy_black:
+                copy_black = False
+            else:
+                copy_black = True
+            current_line = x
+        if not copy_black:
+                new_image_a[x, y] = image_b[x, y]
+
+
+    cv2.imshow('new_im', new_image_a)
     cv2.waitKey()
+
+    return new_image_a
