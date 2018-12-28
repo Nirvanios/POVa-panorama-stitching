@@ -229,8 +229,8 @@ def find_cut_seam(segmented_image, inverted_image, mask):
                         left = -1
                     elif segmented_image[x + 1, y] == -10:
                         right = -2
-                    if left == -1 and right == -2:
-                        print()
+                    # if left == -1 and right == -2:
+                        # print()
                     tmp_edge = Edge(node_1=left, node_2=right)
                     tmp_edge_inv = Edge(node_1=right, node_2=left)
                 elif up != down and (up != -1 and down != -1):
@@ -238,8 +238,8 @@ def find_cut_seam(segmented_image, inverted_image, mask):
                         up = -1
                     elif segmented_image[x + 1, y] == -10:
                         down = -2
-                    if up == -1 and down == -2:
-                        print()
+                    # if up == -1 and down == -2:
+                        # print()
                     tmp_edge = Edge(node_1=up, node_2=down)
                     tmp_edge_inv = Edge(node_1=down, node_2=up)
                 if tmp_edge == tmp_edge_inv:
