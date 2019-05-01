@@ -1,8 +1,11 @@
 import cv2
 import numpy as np
+import math
+
+import PanoramaStitching.Utils as Utils
 
 
-def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
+def alpha_blend(image_a, mask_a, image_b, mask_b, image_a_midpoint, image_b_midpoint):
     """
     Blends two images together
     :param image_a: first image (panorama)
@@ -13,12 +16,13 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
     """
     rows, cols = image_a.shape[:2]
 
-    gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
-    gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
-    mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]
-    mask_b = cv2.threshold(gray_b, 1, 255, cv2.THRESH_BINARY)[1]
+    Utils.cut_pixels_around_image(image_a, mask_a)
+    Utils.cut_pixels_around_image(image_b, mask_a)
 
-    mask = cv2.bitwise_and(mask_a, mask_b)
+    maskA = cv2.cvtColor(mask_a, cv2.COLOR_BGR2GRAY)
+    maskB = cv2.cvtColor(mask_b, cv2.COLOR_BGR2GRAY)
+
+    mask = cv2.bitwise_and(maskA, maskB)
 
     contours = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
     ext_left = cols
@@ -40,7 +44,7 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
         if bot > ext_bot:
             ext_bot = bot
 
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     mask = cv2.erode(mask, kernel, iterations=1)
 
     step = 0.0
@@ -80,3 +84,39 @@ def alpha_blend(image_a, image_b, image_a_midpoint, image_b_midpoint):
             value = 0
 
     return result
+
+
+def simple_overlay(imageA, maskA, imageB, maskB):
+    result = np.copy(imageA)
+    loc = np.where(maskB == 255)
+    result[loc[0], loc[1]] = imageB[loc[0], loc[1]]
+    return result
+
+
+def weighted_compositing(imageA, maskA, imageB, maskB, centerA, centerB):
+    # Utils.cut_pixels_around_image(imageA, maskA)
+    Utils.cut_pixels_around_image(imageB, maskB)
+    mask_overlap = Utils.get_overlapping_mask(imageA, imageB)
+    mask_overlap_blur = cv2.GaussianBlur(mask_overlap, (101, 101), cv2.BORDER_DEFAULT)
+
+    result = np.copy(imageA)
+    loc = np.where(maskB == 255)
+    result[loc[0], loc[1]] = imageB[loc[0], loc[1]]
+
+    height, width, _ = imageA.shape
+    for y in range(height):
+        for x in range(width):
+            if mask_overlap[y, x] == 255:
+                distanceA = euclidan_distance(np.array(centerA[0]), np.array((y, x)))
+                distanceB = euclidan_distance(np.array(centerB[0]), np.array((y, x)))
+                ratioA = distanceA / (distanceA + distanceB)
+                ratioB = 1 - ratioA
+                result[y, x] = imageA[y, x] * ratioA + imageB[y, x] * ratioB
+
+    return result
+
+
+def euclidan_distance(point1, point2):
+    diff = abs(point1 - point2)
+    tmp = diff[0] * diff[0] + diff[1] * diff[1]
+    return math.sqrt(tmp)

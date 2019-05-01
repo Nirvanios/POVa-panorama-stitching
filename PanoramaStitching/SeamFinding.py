@@ -88,92 +88,49 @@ def get_watershed_image(image, mask):
 
     gray = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     gray = np.where(mask == 0, mask, gray)
-    kernel = np.ones((3, 3), np.uint8)
-    gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel, iterations=1)
-    gray = cv2.dilate(gray, kernel, iterations=2)
+    # kernel = np.ones((3, 3), np.uint8)
+    # gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel, iterations=1)
+    # gray = cv2.dilate(gray, kernel, iterations=2)
+
+    gray[mask != 255] = 255
+    """
+    cv2.imshow("diff", gray)
+    cv2.waitKey()
+    """
     half = int(ext_left + ((ext_right - ext_left) / 2))
     for i in range(height):
-        if mask[i, half] != 255:
-            gray[i, half] = 255
+        if gray[i, half] == 255:
+            gray[i, half] = 0
+        else:
+            break
+
+    for i in range(height - 1, -1, -1):
+        if gray[i, half] == 255:
+            gray[i, half] = 0
+        else:
+            break
+    """
+    cv2.imshow("diff", gray)
+    cv2.waitKey()
+    """
 
     ret, markers = cv2.connectedComponents(gray)
 
     watershed_image = cv2.watershed(original_image, markers)
     original_mask[watershed_image == -1] = [0, 0, 255]
+    """
+    cv2.imshow("diff", original_mask)
+    cv2.waitKey()
+    """
 
-    temp_labels = np.unique(watershed_image[:, 1])
-    for item in temp_labels:
-        if item != -1:
-            watershed_image[watershed_image == item] = -5
-
-    temp_labels = np.unique(watershed_image[:, width - 2])
-    for item in temp_labels:
-        if item != -1:
-            watershed_image[watershed_image == item] = -10
-
-    stepped_over = np.zeros(height, dtype=bool)
-    for x in range(1, ext_right):
-        for y in range(height):
-            if watershed_image[y, x] == -1:
-                stepped_over[y] = True
-            if ((mask[y, x] == 0 and x < ext_left2 + 1) or (not stepped_over[y] and mask[y, x] == 255)) and \
-                    watershed_image[
-                        y, x] != -1:
-                watershed_image[y, x] = -5
-
-    new_watershed = watershed_image
-    iteration = 0
-    changed = True
-    original_mask[watershed_image == -5] = [255, 0, 0]
-    original_mask[watershed_image == -10] = [0, 255, 0]
-
-    while changed:
-        changed = False
-        iteration += 1
-        for (x, y), item in np.ndenumerate(watershed_image):
-            if item == -10 and mask[x, y] == 255 and watershed_image[x, y] != -1:
-                neighbours = get_4neighbour_elements(new_watershed, x, y)
-                if np.any(neighbours == -5):
-                    new_watershed[x, y] = -5
-                    changed = True
-        watershed_image = new_watershed
-
-    watershed_image[watershed_image[:, ext_right - 1] == -5, ext_right - 1] = -1
-
-    stepped_over = np.zeros(height, dtype=bool)
-    for x in range(2, (width - ext_left)):
-        for y in range(height):
-            if watershed_image[y, -x] == -1:
-                stepped_over[y] = True
-            if -x > -(width - ext_right2):
-                stepped_over[mask[:, x] == 0] = True
-            if ((mask[y, -x] == 0 and -x > -(width - ext_right2)) or (not stepped_over[y] and mask[y, -x] == 255)) and \
-                    watershed_image[
-                        y, -x] != -1:
-                watershed_image[y, -x] = -4
-
-    new_watershed = watershed_image
-    iteration = 0
-    changed = True
-
-    while changed:
-        changed = False
-        iteration += 1
-        for (x, y), item in np.ndenumerate(watershed_image):
-            if (item == -10) and mask[x, y] == 255 and watershed_image[x, y] != -1:
-                neighbours = get_4neighbour_elements(new_watershed, x, y)
-                if np.any(neighbours == -4):
-                    new_watershed[x, y] = -4
-                    changed = True
-        watershed_image = new_watershed
-
-    watershed_image[watershed_image == -10] = -6
-    watershed_image[watershed_image == -4] = -10
-
-    original_mask[watershed_image == -5] = [255, 0, 0]
-    original_mask[watershed_image == -10] = [0, 255, 0]
+    original_mask[watershed_image == 1] = [255, 0, 0]
+    original_mask[watershed_image == 2] = [0, 255, 0]
     original_mask[watershed_image == -6] = [255, 0, 255]
     original_mask[watershed_image == -1] = [0, 0, 255]
+    """
+    cv2.imshow("diff", original_mask)
+    cv2.waitKey()
+    """
 
     return watershed_image
 
@@ -190,114 +147,184 @@ def find_cut_seam(segmented_image, inverted_image, mask):
     Edge = namedtuple("Edge", ["node_1", "node_2"])
     edges = {}
     graph = nx.Graph()
-    for x in range(height):
-        for y in range(width):
+    for x in range(1, height - 1):
+        for y in range(1, width - 1):
             if mask[x, y] == 255 and segmented_image[x, y] == -1:
-                tmp_edge = Edge(node_1=-5, node_2=-5)
-                tmp_edge_inv = Edge(node_1=-5, node_2=-5)
+
+                edge = None
+                edge_inv = None
+
                 up = segmented_image[x - 1, y]
                 down = segmented_image[x + 1, y]
                 left = segmented_image[x, y - 1]
                 right = segmented_image[x, y + 1]
-                if left != down and (left != -1 and right != -1):
-                    if segmented_image[x - 1, y] == -5:
-                        left = -1
-                    elif segmented_image[x + 1, y] == -10:
-                        right = -2
-                    # if left == -1 and right == -2:
-                        # print()
-                    tmp_edge = Edge(node_1=left, node_2=right)
-                    tmp_edge_inv = Edge(node_1=right, node_2=left)
-                elif up != down and (up != -1 and down != -1):
-                    if segmented_image[x - 1, y] == -5:
-                        up = -1
-                    elif segmented_image[x + 1, y] == -10:
-                        down = -2
-                    # if up == -1 and down == -2:
-                        # print()
-                    tmp_edge = Edge(node_1=up, node_2=down)
-                    tmp_edge_inv = Edge(node_1=down, node_2=up)
-                if tmp_edge == tmp_edge_inv:
+                if up != down and up != -1 and down != -1:
+                    edge = Edge(node_1=up, node_2=down)
+                    edge_inv = Edge(node_1=down, node_2=up)
+                elif left != right and left != -1 and right != -1:
+                    edge = Edge(node_1=left, node_2=right)
+                    edge_inv = Edge(node_1=right, node_2=left)
+
+                if edge is None:
                     continue
 
-                if tmp_edge in edges:
-                    edges[tmp_edge] += inverted_image[x, y]
-                elif tmp_edge_inv in edges:
-                    edges[tmp_edge_inv] += inverted_image[x, y]
+                weight = 1
+                if edge.node_1 == 1 or edge.node_2 == 2 or edge_inv.node_1 == 1 or edge_inv.node_2 == 2:
+                    weight = 2
+
+                if edge in edges:
+                    edges[edge] += inverted_image[x, y] * weight
+                elif edge_inv in edges:
+                    edges[edge_inv] += inverted_image[x, y] * weight
                 else:
-                    edges[tmp_edge] = inverted_image[x, y].astype(int)
+                    edges[edge] = inverted_image[x, y].astype(int) * weight
 
     for edge in edges:
-        graph.add_edge(edge.node_1, edge.node_2, capacity=edges[edge])
-    cut_nodes = nx.minimum_edge_cut(graph, -1, -2)
+        graph.add_edge(edge.node_1, edge.node_2, cardinality=edges[edge])
+    cut_nodes = nx.algorithms.connectivity.minimum_edge_cut(graph, 1, 2)
 
-    return cut_nodes
+    pass
+
+    return cut_nodes, graph
 
 
-def graph_cut_blend(image_a, image_b):
+def graph_cut_blend(image_a, mask_a, image_b, mask_b, center_a, center_b):
     """
     Blends two images using watershed and graph cut.
     :param image_a: First image
     :param image_b: Second image
     :return: Panorama blended using graph cut
     """
+
+    # Utils.cut_pixels_around_image(image_a, mask_a)
+    Utils.cut_pixels_around_image(image_b, mask_b)
+
+    """
+    cv2.imshow("imageA", image_a)
+    cv2.imshow("maskA", mask_a)
+    cv2.imshow("maskB", mask_b)
+    cv2.waitKey()
+    """
+
     height, width = image_a.shape[:2]
     gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
     gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
     difference_image = get_inverted_difference_image(gray_a, gray_b)
-    mask = Utils.get_overlapping_mask(image_a, image_b)
+    mask = Utils.get_overlapping_mask(mask_a, mask_b)
     difference_image = np.where(mask == 255, difference_image, 0)
 
     segmented_image = get_watershed_image(difference_image, mask)
-    cut_nodes = np.array(list(find_cut_seam(segmented_image, difference_image, mask)))
-    cut_nodes[cut_nodes == -2] = -10
-    cut_nodes[cut_nodes == -1] = -5
-    new_image_a = np.copy(image_a)
-    copy_black = False
-    current_line = 0
-    for (x, y), item in np.ndenumerate(segmented_image):
-        if current_line != x:
-            copy_black = False
-        if x == 0 or y == 0 or x == height - 1 or y == width - 1:
-            continue
-        left = segmented_image[x, y - 1]
-        right = segmented_image[x, y + 1]
-        rightmost = right
-        if segmented_image[x, y] == -1:
-            if copy_black:
-                i = 1
-                while rightmost == -1 and y + i < width - 1:
-                    i += 1
-                    rightmost = segmented_image[x, y + i]
-                if y + i >= width - 1:
-                    copy_black = True
-                    current_line = x
-                    continue
-            i = 1
-            if left == right:
-                if not copy_black:
-                    new_image_a[x, y] = image_b[x, y]
-                continue
 
-            while left == -1 and y - i > 0:
-                i += 1
-                left = segmented_image[x, y - i]
-            if y - i <= 0 and right != -1:
-                copy_black = True
-                current_line = x
-                continue
+    cut_nodes, graph = find_cut_seam(segmented_image, difference_image, mask)
+    cut_nodes = np.array(list(cut_nodes))
+    print(cut_nodes)
+    seam_image = highlight_seam(segmented_image, cut_nodes, mask)
+    segmented_mask = highlight_segments(cut_nodes, graph, segmented_image)
 
-        if segmented_image[x, y] == -1 \
-                and left != right \
-                and (any((cut_nodes[:] == [right, left]).all(1))
-                     or any((cut_nodes[:] == [left, right]).all(1))):
+    new_imageA = np.copy(image_a)
 
-            if copy_black:
-                copy_black = False
-            else:
-                copy_black = True
-            current_line = x
-        if not copy_black:
-            new_image_a[x, y] = image_b[x, y]
+    if center_a[0][1] > center_b[0][1]:
+        segmented_mask = cv2.bitwise_not(segmented_mask)
 
-    return new_image_a
+
+    locs = np.where(mask_b == 255)
+    new_imageA[locs[0], locs[1]] = image_b[locs[0], locs[1]]
+
+
+
+    new_mask = cv2.bitwise_and(mask, segmented_mask)
+
+    locs = np.where(new_mask == 255)
+    new_imageA[locs[0], locs[1]] = image_a[locs[0], locs[1]]
+    """
+    cv2.imshow("imageA", image_a)
+    cv2.imshow("imageB", image_b)
+    cv2.waitKey()
+    """
+
+    """
+    cv2.imshow("new_imageA", new_imageA)
+    cv2.waitKey()
+    """
+
+    return new_imageA
+
+
+def highlight_seam(input_image, cuts, mask):
+    bck = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+    black = np.zeros(mask.shape, dtype=np.uint8)
+    height, width = input_image.shape
+    tmp_image = np.copy(input_image)
+    for x in range(1, height - 1):
+        for y in range(1, width - 1):
+            if mask[x, y] == 255 and input_image[x, y] == -1:
+                bck[x, y] = (255, 0, 0)
+                up = input_image[x - 1, y]
+                down = input_image[x + 1, y]
+                left = input_image[x, y - 1]
+                right = input_image[x, y + 1]
+                if up != down and up != -1 and down != -1:
+                    if (up in cuts[:, 0] and down in cuts[:, 1]) or (down in cuts[:, 0] and up in cuts[:, 1]):
+                        bck[x, y] = (0, 0, 255)
+                        black[x, y] = 255
+                        tmp_image[x, y] = -2
+                elif left != right and left != -1 and right != -1:
+                    if (left in cuts[:, 0] and right in cuts[:, 1]) or (right in cuts[:, 0] and left in cuts[:, 1]):
+                        bck[x, y] = (0, 0, 255)
+                        black[x, y] = 255
+                        tmp_image[x, y] = -2
+
+    input_image = tmp_image
+
+    """
+    cv2.imshow("bck", bck)
+    cv2.waitKey()
+    """
+
+    kernel = np.ones((5, 5), np.uint8)
+    closing = cv2.morphologyEx(black, cv2.MORPH_CLOSE, kernel)
+    """
+    cv2.imshow("bck", closing)
+    cv2.waitKey()
+    """
+    return closing
+
+
+def highlight_segments(cuts, graph, input_image):
+    mask = np.zeros(input_image.shape, dtype=np.uint8)
+    graph.remove_edges_from(cuts)
+    connected_labels = set()
+    labels_to_walk = {1}
+    while len(labels_to_walk) is not 0:
+        current_label = labels_to_walk.pop()
+        connected_labels.add(current_label)
+        new_labels = set([e for e in graph[current_label]])
+        new_labels = new_labels - connected_labels
+        labels_to_walk.update(new_labels)
+
+    for label in connected_labels:
+        mask[input_image == label] = 255
+
+    """
+    cv2.imshow("mask", mask)
+    cv2.waitKey()
+    """
+
+    ret, markers = cv2.connectedComponents(mask, connectivity=8)
+    markers = markers.astype(np.uint8)
+    mask2 = cv2.threshold(markers, 0, 255, cv2.THRESH_BINARY)[1]
+    """
+    cv2.imshow("bck", mask2)
+    cv2.waitKey()
+    """
+    kernel = np.ones((3, 3), np.uint8)
+    closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    """
+    cv2.imshow("bck", closing)
+    cv2.waitKey()
+    """
+
+    return closing
+
+

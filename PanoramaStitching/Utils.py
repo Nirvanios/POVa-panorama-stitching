@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import glob
+import math
 from sklearn.cluster import KMeans
 from sklearn.utils import shuffle
 
@@ -151,7 +152,16 @@ def get_overlapping_mask(image_a, image_b):
     """
     gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
     gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
-    mask_a = cv2.threshold(gray_a, 1, 255, cv2.THRESH_BINARY)[1]
-    mask_b = cv2.threshold(gray_b, 1, 255, cv2.THRESH_BINARY)[1]
+
+    mask_a = cv2.threshold(gray_a, 0, 255, cv2.THRESH_BINARY)[1]
+    mask_b = cv2.threshold(gray_b, 0, 255, cv2.THRESH_BINARY)[1]
 
     return cv2.bitwise_and(mask_a, mask_b)
+
+
+def cut_pixels_around_image(image, mask, thickness=2):
+    tmp_mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    contours = cv2.findContours(tmp_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[1]
+    for i in range(len(contours)):
+        cv2.drawContours(image, contours, i, [0, 0, 0], thickness=thickness, lineType=cv2.LINE_8)
+        cv2.drawContours(mask, contours, i, [0, 0, 0], thickness=thickness, lineType=cv2.LINE_8)

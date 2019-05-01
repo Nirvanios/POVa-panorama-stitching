@@ -45,7 +45,7 @@ def wrap_image_on_cylinder(img1, K):
     return cyl, cyl_mask
 
 
-def stitch_images(img1, img2, matrix, transformation_type):
+def stitch_images(img1, mask1, img2, mask2, matrix, transformation_type, blender_type):
     """
     Stitch images using affine warp.
     :param transformation_type: homography or affine
@@ -54,6 +54,10 @@ def stitch_images(img1, img2, matrix, transformation_type):
     :param matrix: affine/homography matrix
     :return: stitched image
     """
+
+    if mask2 is None:
+        mask2 = np.ones(img2.shape, dtype=np.uint8) * 255
+
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
 
@@ -77,25 +81,37 @@ def stitch_images(img1, img2, matrix, transformation_type):
     h_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
 
     output_img = cv2.warpPerspective(img2, h_translation.dot(matrix), (x_max - x_min, y_max - y_min))
+    mask2 = cv2.warpPerspective(mask2, h_translation.dot(matrix), (x_max - x_min, y_max - y_min))
 
     temp_image = np.zeros((y_max - y_min, x_max - x_min, 3), np.uint8)
 
+    if mask1 is None:
+        mask1 = np.ones(img1.shape, dtype=np.uint8) * 255
+
+    tmp_mask = np.zeros(temp_image.shape, dtype=np.uint8)
+
     temp_image[translation_dist[1]:rows1 + translation_dist[1],
     translation_dist[0]:cols1 + translation_dist[0]] = img1
+
+    tmp_mask[translation_dist[1]:rows1 + translation_dist[1],
+    translation_dist[0]:cols1 + translation_dist[0]] = mask1
+
+    mask1 = np.copy(tmp_mask)
 
     width, height, _ = temp_image.shape
 
     panorama_mid_point = np.int32(list_of_points_1[2] / 2 - translation_dist)
     to_add_mid_point = np.int32(list_of_points_2[2] - (list_of_points_2[2] - list_of_points_2[0]) / 2)
 
-    if True:
-        # temp_image = SeamFinding.graph_cut_blend(temp_image, output_img)
-        temp_image = Blender.alpha_blend(temp_image, output_img, to_add_mid_point, panorama_mid_point)
+    if blender_type == "graph_cut":
+        temp_image = SeamFinding.graph_cut_blend(temp_image, mask1, output_img, mask2, panorama_mid_point, to_add_mid_point)
+    elif blender_type == "weight1":
+        temp_image = Blender.alpha_blend(temp_image, mask1, output_img, mask2, to_add_mid_point, panorama_mid_point)
+    elif blender_type == "weight2":
+        temp_image = Blender.weighted_compositing(temp_image, mask1, output_img, mask2, panorama_mid_point, to_add_mid_point)
     else:
-        for x in range(width):
-            for y in range(height):
-                maxpix = temp_image[x, y].max()
-                if output_img[x, y, 0] > maxpix or output_img[x, y, 1] > maxpix or output_img[x, y, 2] > maxpix:
-                    temp_image[x, y] = output_img[x, y]
+        temp_image = Blender.simple_overlay(temp_image, mask1, output_img, mask2)
 
-    return temp_image
+    mask1 = cv2.bitwise_or(mask1, mask2)
+
+    return temp_image, mask1

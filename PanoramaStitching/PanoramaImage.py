@@ -5,9 +5,10 @@ class PanoramaImage:
     key_points = None
     descriptors = None
 
-    def __init__(self, name, image):
+    def __init__(self, name, image, mask=None):
         self.name = name
         self.image = image
+        self.mask = mask
 
     def calculate_descriptors(self, matcher):
         """

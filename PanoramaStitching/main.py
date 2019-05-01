@@ -44,6 +44,11 @@ parser.add_argument('--cyl_wrap', default=False,
                     action='store_true',
                     help='Wrap images on a cylinder')
 
+parser.add_argument('--blender',
+                    default='None',
+                    choices=['None', 'weight1', 'weight2', 'graph_cut'],
+                    help='key point detector SIFT or SURF')
+
 parser.add_argument('--debug', default=False,
                     action='store_true',
                     help='Allow debug prints')
@@ -95,10 +100,13 @@ def panorama_loop(args, images, panorama_image):
             # Use homography or affine transformation
             matches, h, status = panorama_image.matches[index][0]
 
-            panorama_image.image = Stitcher.stitch_images(panorama_image.image,
+            panorama_image.image, panorama_image.mask = Stitcher.stitch_images(panorama_image.image,
+                                                          panorama_image.mask,
                                                           panorama_image.matches[index][1].image,
+                                                          panorama_image.matches[index][1].mask,
                                                           h,
-                                                          args.pano_type.lower())
+                                                          args.pano_type.lower(),
+                                                          args.blender.lower())
             # Changed image, continue
             panorama_image.matches[index][1].checked = True
             added = True
@@ -127,21 +135,27 @@ def panorama(args, main_image, images):
             K = np.array([[f, 0, w / 2], [0, f, h / 2], [0, 0, 1]])
 
             # Geometrically transform image and add border
+            mask = np.ones(img.image.shape, dtype=np.uint8) * 255
             img.image = Stitcher.wrap_image_on_cylinder(img.image, K)[0]
+            img.mask = Stitcher.wrap_image_on_cylinder(mask, K)[0]
+            if main_image.name == img.name:
+                main_image.mask = img.mask
         img.calculate_descriptors(matcher)
     logger_instance.log(LogLevel.STATUS, "Calculating image descriptors... Done")
 
     # Get main panorama image
-    panorama_image = MainPanoramaImage(main_image.name, main_image.image)
+    panorama_image = MainPanoramaImage(main_image.name, main_image.image, main_image.mask)
     main_image.checked = True
 
     # Create wonderful panorama
     panorama_loop(args, images, panorama_image)
 
+    """
     # Global color reduction
     logger_instance.log(LogLevel.STATUS, "Color balancing...")
     panorama_image.image = PanoUtils.balance_global_image(panorama_image.image)
     logger_instance.log(LogLevel.STATUS, "Color balancing... Done.")
+    """
 
     logger_instance.log(LogLevel.STATUS, "Saving finished panorama image")
     logger_instance.log(LogLevel.INFO, "Final image location: " + args.dest)
