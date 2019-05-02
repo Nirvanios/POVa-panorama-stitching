@@ -46,7 +46,7 @@ parser.add_argument('--cyl_wrap', default=False,
 
 parser.add_argument('--blender',
                     default='None',
-                    choices=['None', 'weight1', 'weight2', 'graph_cut'],
+                    choices=['None', 'weight', 'graph_cut'],
                     help='key point detector SIFT or SURF')
 
 parser.add_argument('--debug', default=False,

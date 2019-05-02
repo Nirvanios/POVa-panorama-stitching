@@ -95,9 +95,9 @@ def simple_overlay(imageA, maskA, imageB, maskB):
 
 
 def weighted_compositing(imageA, maskA, imageB, maskB, centerA, centerB):
-    # Utils.cut_pixels_around_image(imageA, maskA)
+    Utils.cut_pixels_around_image(imageA, maskA)
     Utils.cut_pixels_around_image(imageB, maskB)
-    mask_overlap = Utils.get_overlapping_mask(imageA, imageB)
+    mask_overlap = Utils.get_overlapping_mask(maskA, maskB)
     mask_overlap_blur = cv2.GaussianBlur(mask_overlap, (101, 101), cv2.BORDER_DEFAULT)
 
     result = np.copy(imageA)

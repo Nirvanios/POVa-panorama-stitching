@@ -105,9 +105,7 @@ def stitch_images(img1, mask1, img2, mask2, matrix, transformation_type, blender
 
     if blender_type == "graph_cut":
         temp_image = SeamFinding.graph_cut_blend(temp_image, mask1, output_img, mask2, panorama_mid_point, to_add_mid_point)
-    elif blender_type == "weight1":
-        temp_image = Blender.alpha_blend(temp_image, mask1, output_img, mask2, to_add_mid_point, panorama_mid_point)
-    elif blender_type == "weight2":
+    elif blender_type == "weight":
         temp_image = Blender.weighted_compositing(temp_image, mask1, output_img, mask2, panorama_mid_point, to_add_mid_point)
     else:
         temp_image = Blender.simple_overlay(temp_image, mask1, output_img, mask2)
