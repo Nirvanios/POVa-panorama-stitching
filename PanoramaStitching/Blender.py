@@ -87,6 +87,7 @@ def alpha_blend(image_a, mask_a, image_b, mask_b, image_a_midpoint, image_b_midp
 
 
 def simple_overlay(imageA, maskA, imageB, maskB):
+    Utils.cut_pixels_around_image(imageB, maskB)
     result = np.copy(imageA)
     loc = np.where(maskB == 255)
     result[loc[0], loc[1]] = imageB[loc[0], loc[1]]

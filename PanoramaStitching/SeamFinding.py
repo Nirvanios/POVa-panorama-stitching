@@ -196,7 +196,7 @@ def graph_cut_blend(image_a, mask_a, image_b, mask_b, center_a, center_b):
     :return: Panorama blended using graph cut
     """
 
-    # Utils.cut_pixels_around_image(image_a, mask_a)
+    Utils.cut_pixels_around_image(image_a, mask_a)
     Utils.cut_pixels_around_image(image_b, mask_b)
 
     """
