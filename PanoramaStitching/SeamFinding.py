@@ -15,11 +15,7 @@ def get_inverted_difference_image(image_a, image_b):
     :param image_b: Second image
     :return: inverted difference of images
     """
-    channels = cv2.split(image_a)
-    max_a = cv2.max(channels[0], cv2.max(channels[1], channels[2]))
-    channels = cv2.split(image_b)
-    max_b = cv2.max(channels[0], cv2.max(channels[1], channels[2]))
-    diff = max_a - max_b
+    diff = image_a - image_b
     return 255 - diff
 
 
@@ -211,9 +207,9 @@ def graph_cut_blend(image_a, mask_a, image_b, mask_b, center_a, center_b):
     """
 
     height, width = image_a.shape[:2]
-    #gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
-    #gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
-    difference_image = get_inverted_difference_image(image_a, image_b)
+    gray_a = cv2.cvtColor(image_a, cv2.COLOR_BGR2GRAY)
+    gray_b = cv2.cvtColor(image_b, cv2.COLOR_BGR2GRAY)
+    difference_image = get_inverted_difference_image(gray_a, gray_b)
     mask = Utils.get_overlapping_mask(mask_a, mask_b)
     difference_image = np.where(mask == 255, difference_image, 0)
 
@@ -221,7 +217,6 @@ def graph_cut_blend(image_a, mask_a, image_b, mask_b, center_a, center_b):
 
     cut_nodes, graph = find_cut_seam(segmented_image, difference_image, mask)
     cut_nodes = np.array(list(cut_nodes))
-    print(cut_nodes)
     seam_image = highlight_seam(segmented_image, cut_nodes, mask)
     segmented_mask = highlight_segments(cut_nodes, graph, segmented_image)
 
